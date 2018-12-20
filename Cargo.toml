@@ -1,0 +1,9 @@
+[package]
+name = "hdwallet"
+version = "0.0.0"
+authors = ["jjy <jjyruby@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "Hierarchical deterministic wallets framework"
+
+[dependencies]
