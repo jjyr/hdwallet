@@ -7,3 +7,7 @@ license = "MIT"
 description = "Hierarchical deterministic wallets framework"
 
 [dependencies]
+secp256k1 = "0.12"
+rand = "0.6.1"
+ring = "0.14.0-alpha2"
+
