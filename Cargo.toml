@@ -10,4 +10,5 @@ description = "Hierarchical deterministic wallets framework"
 secp256k1 = "0.12"
 rand = "0.6.1"
 ring = "0.14.0-alpha2"
+numext-fixed-uint = "0.1.2"
 
