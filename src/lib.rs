@@ -7,6 +7,7 @@ mod tests {
 
     type ChainCode = Vec<u8>;
     const HARDENDED_KEY_START_INDEX: u64 = 2_147_483_648; // 2 ** 31
+    const HARDENDED_KEY_END_INDEX: u64 = 4_294_967_295; // 2 ** 32 - 1
 
     struct ExtendedPrivateKey {
         private_key: SecretKey,
@@ -19,7 +20,14 @@ mod tests {
 
     #[derive(Debug)]
     enum Error {
-        InvalidKey,
+        IndexOutOfRange,
+        InvalidIndex,
+    }
+
+    #[derive(Debug, Copy, Clone)]
+    enum KeyMode {
+        Normal,
+        Hardened,
     }
 
     fn random_secret_key() -> SecretKey {
@@ -35,17 +43,14 @@ mod tests {
     }
 
     fn generate_master_key(seed_length: usize) -> Result<ExtendedPrivateKey, Error> {
-        let mut seed = Vec::with_capacity(seed_length);
-        let mut rng = rand::thread_rng();
-        rng.fill(seed.as_mut_slice());
+        let seed = {
+            let mut seed = Vec::with_capacity(seed_length);
+            let mut rng = rand::thread_rng();
+            rng.fill(seed.as_mut_slice());
+            seed
+        };
         let signature = hmac_sha512(b"Bitcoin seed", &seed);
-        extract_private_key_from_signature(signature)
-    }
-
-    fn extract_private_key_from_signature(
-        sig: hmac::Signature,
-    ) -> Result<ExtendedPrivateKey, Error> {
-        let sig_bytes = sig.as_ref();
+        let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(private_key) = SecretKey::from_slice(key) {
             return Ok(ExtendedPrivateKey {
@@ -53,28 +58,89 @@ mod tests {
                 chain_code: chain_code.to_vec(),
             });
         }
-        Err(Error::InvalidKey)
+        Err(Error::InvalidIndex)
+    }
+
+    fn to_hardened_key_index(index: u64) -> u64 {
+        if index < HARDENDED_KEY_START_INDEX {
+            HARDENDED_KEY_START_INDEX + index
+        } else {
+            index
+        }
     }
 
     impl ExtendedPrivateKey {
-        pub fn derive_child_private_key(&self, index: u64) -> Result<ExtendedPrivateKey, Error> {
-            let signature = if index >= HARDENDED_KEY_START_INDEX {
-                let mut ser_index = Vec::new();
-                U256::from(index)
-                    .into_big_endian(&mut ser_index)
-                    .expect("big_endian encode");
+        fn derive_hardended_key(&self, index: u64) -> Result<ExtendedPrivateKey, Error> {
+            let index = to_hardened_key_index(index);
+            if index > HARDENDED_KEY_END_INDEX {
+                return Err(Error::IndexOutOfRange);
+            }
+            let data = {
                 let mut data = Vec::with_capacity(33);
                 data.extend_from_slice(&[0x00]);
                 data.extend_from_slice(&self.private_key[..]);
+                let mut ser_index = [0u8; 32];
+                U256::from(index)
+                    .into_big_endian(&mut ser_index)
+                    .expect("big_endian encode");
                 data.extend_from_slice(&ser_index);
-                hmac_sha512(&self.chain_code, &data)
-            } else {
-                //// normal child
-                //let data = &[point(self.private_key.serialize()?), index];
-                //hmac_sha512(&self.chain_code, data)
-                hmac_sha512(&self.chain_code, &Vec::new())
+                data
             };
-            extract_private_key_from_signature(signature)
+            assert_eq!(data.len(), 65);
+            let signature = hmac_sha512(&self.chain_code, &data);
+            let sig_bytes = signature.as_ref();
+            let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
+            if let Ok(private_key) = SecretKey::from_slice(key) {
+                return Ok(ExtendedPrivateKey {
+                    private_key,
+                    chain_code: chain_code.to_vec(),
+                });
+            }
+            Err(Error::InvalidIndex)
+        }
+
+        fn derive_normal_key(&self, index: u64) -> Result<ExtendedPrivateKey, Error> {
+            if index >= HARDENDED_KEY_START_INDEX {
+                return Err(Error::IndexOutOfRange);
+            }
+            let data = {
+                let mut data = Vec::with_capacity(33);
+                let secp = Secp256k1::new();
+                let ser_public_key =
+                    PublicKey::from_secret_key(&secp, &self.private_key).serialize();
+                data.extend_from_slice(&ser_public_key[..]);
+                let mut ser_index = [0u8; 32];
+                U256::from(index)
+                    .into_big_endian(&mut ser_index)
+                    .expect("big_endian encode");
+                data.extend_from_slice(&ser_index);
+                data
+            };
+            assert_eq!(data.len(), 65);
+            let signature = hmac_sha512(&self.chain_code, &data);
+            let sig_bytes = signature.as_ref();
+            let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
+            if let Ok(mut private_key) = SecretKey::from_slice(key) {
+                private_key
+                    .add_assign(&self.private_key[..])
+                    .expect("add point");
+                return Ok(ExtendedPrivateKey {
+                    private_key,
+                    chain_code: chain_code.to_vec(),
+                });
+            }
+            Err(Error::InvalidIndex)
+        }
+
+        pub fn derive_child_private_key(
+            &self,
+            key_mode: KeyMode,
+            index: u64,
+        ) -> Result<ExtendedPrivateKey, Error> {
+            match key_mode {
+                KeyMode::Hardened => self.derive_hardended_key(index),
+                KeyMode::Normal => self.derive_normal_key(index),
+            }
         }
     }
 
@@ -119,8 +185,11 @@ mod tests {
     fn derivation_private_child_key_from_private_parent_key() {
         let master_key = fetch_random_key(256);
         master_key
-            .derive_child_private_key(HARDENDED_KEY_START_INDEX + 1)
+            .derive_child_private_key(KeyMode::Hardened, 0)
             .expect("hardended_key");
+        master_key
+            .derive_child_private_key(KeyMode::Normal, 0)
+            .expect("normal_key");
     }
 
     #[test]
