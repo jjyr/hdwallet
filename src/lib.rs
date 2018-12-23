@@ -9,14 +9,17 @@ mod tests {
     const HARDENDED_KEY_START_INDEX: u64 = 2_147_483_648; // 2 ** 31
     const HARDENDED_KEY_END_INDEX: u64 = 4_294_967_295; // 2 ** 32 - 1
 
+    #[derive(Debug, Clone)]
     struct ExtendedPrivateKey {
         private_key: SecretKey,
         chain_code: ChainCode,
     }
-    //struct ExtendedPublicKey {
-    //    public_key: PublicKey,
-    //    chain_code: ChainCode,
-    //}
+
+    #[derive(Debug, Clone)]
+    struct ExtendedPublicKey {
+        public_key: PublicKey,
+        chain_code: ChainCode,
+    }
 
     #[derive(Debug)]
     enum Error {
@@ -28,6 +31,20 @@ mod tests {
     enum KeyMode {
         Normal,
         Hardened,
+    }
+
+    #[derive(Debug, Clone)]
+    struct ChildPrivateKey {
+        index: u64,
+        key_mode: KeyMode,
+        extended_key: ExtendedPrivateKey,
+    }
+
+    #[derive(Debug, Clone)]
+    struct ChildPublicKey {
+        index: u64,
+        key_mode: KeyMode,
+        extended_key: ExtendedPublicKey,
     }
 
     fn random_secret_key() -> SecretKey {
@@ -70,7 +87,7 @@ mod tests {
     }
 
     impl ExtendedPrivateKey {
-        fn derive_hardended_key(&self, index: u64) -> Result<ExtendedPrivateKey, Error> {
+        fn derive_hardended_key(&self, index: u64) -> Result<ChildPrivateKey, Error> {
             let index = to_hardened_key_index(index);
             if index > HARDENDED_KEY_END_INDEX {
                 return Err(Error::IndexOutOfRange);
@@ -91,15 +108,19 @@ mod tests {
             let sig_bytes = signature.as_ref();
             let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
             if let Ok(private_key) = SecretKey::from_slice(key) {
-                return Ok(ExtendedPrivateKey {
-                    private_key,
-                    chain_code: chain_code.to_vec(),
+                return Ok(ChildPrivateKey {
+                    index,
+                    key_mode: KeyMode::Hardened,
+                    extended_key: ExtendedPrivateKey {
+                        private_key,
+                        chain_code: chain_code.to_vec(),
+                    },
                 });
             }
             Err(Error::InvalidIndex)
         }
 
-        fn derive_normal_key(&self, index: u64) -> Result<ExtendedPrivateKey, Error> {
+        fn derive_normal_key(&self, index: u64) -> Result<ChildPrivateKey, Error> {
             if index >= HARDENDED_KEY_START_INDEX {
                 return Err(Error::IndexOutOfRange);
             }
@@ -124,9 +145,13 @@ mod tests {
                 private_key
                     .add_assign(&self.private_key[..])
                     .expect("add point");
-                return Ok(ExtendedPrivateKey {
-                    private_key,
-                    chain_code: chain_code.to_vec(),
+                return Ok(ChildPrivateKey {
+                    index,
+                    key_mode: KeyMode::Normal,
+                    extended_key: ExtendedPrivateKey {
+                        private_key,
+                        chain_code: chain_code.to_vec(),
+                    },
                 });
             }
             Err(Error::InvalidIndex)
@@ -136,7 +161,7 @@ mod tests {
             &self,
             key_mode: KeyMode,
             index: u64,
-        ) -> Result<ExtendedPrivateKey, Error> {
+        ) -> Result<ChildPrivateKey, Error> {
             match key_mode {
                 KeyMode::Hardened => self.derive_hardended_key(index),
                 KeyMode::Normal => self.derive_normal_key(index),
