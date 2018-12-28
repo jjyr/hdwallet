@@ -23,23 +23,48 @@ mod tests {
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
     enum Error {
-        IndexOutOfRange,
-        InvalidIndex,
-        InvalidKeyMode,
+        InvalidKeyIndex,
+        InvalidResultKey,
     }
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-    enum KeyMode {
-        Normal,
-        Hardened,
+    enum KeyIndex {
+        Normal(u64),
+        Hardened(u64),
     }
 
-    impl From<u64> for KeyMode {
+    impl KeyIndex {
+        fn raw_index(&self) -> u64 {
+            match self {
+                KeyIndex::Normal(i) => *i,
+                KeyIndex::Hardened(i) => *i,
+            }
+        }
+
+        fn hardened_from_index(i: u64) -> KeyIndex {
+            if i < HARDENDED_KEY_START_INDEX {
+                KeyIndex::Hardened(HARDENDED_KEY_START_INDEX + i)
+            } else {
+                KeyIndex::Hardened(i)
+            }
+        }
+
+        fn is_valid(&self) -> bool {
+            match self {
+                KeyIndex::Normal(i) => *i < HARDENDED_KEY_START_INDEX,
+                KeyIndex::Hardened(i) => {
+                    *i >= HARDENDED_KEY_START_INDEX && *i <= HARDENDED_KEY_END_INDEX
+                }
+            }
+        }
+    }
+
+    impl From<u64> for KeyIndex {
         fn from(index: u64) -> Self {
             if index < HARDENDED_KEY_START_INDEX {
-                KeyMode::Normal
+                KeyIndex::Normal(index)
             } else if index <= HARDENDED_KEY_END_INDEX {
-                KeyMode::Hardened
+                KeyIndex::Hardened(index)
             } else {
                 panic!("Out of range index {:?}", index);
             }
@@ -48,15 +73,13 @@ mod tests {
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct ChildPrivKey {
-        index: u64,
-        key_mode: KeyMode,
+        key_index: KeyIndex,
         extended_key: ExtendedPrivKey,
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct ChildPubKey {
-        index: u64,
-        key_mode: KeyMode,
+        key_index: KeyIndex,
         extended_key: ExtendedPubKey,
     }
 
@@ -92,23 +115,11 @@ mod tests {
                 chain_code: chain_code.to_vec(),
             });
         }
-        Err(Error::InvalidIndex)
-    }
-
-    fn to_hardened_key_index(index: u64) -> u64 {
-        if index < HARDENDED_KEY_START_INDEX {
-            HARDENDED_KEY_START_INDEX + index
-        } else {
-            index
-        }
+        Err(Error::InvalidResultKey)
     }
 
     impl ExtendedPrivKey {
         fn derive_hardended_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-            let index = to_hardened_key_index(index);
-            if index > HARDENDED_KEY_END_INDEX {
-                return Err(Error::IndexOutOfRange);
-            }
             let data = {
                 let mut data = Vec::with_capacity(33);
                 data.extend_from_slice(&[0x00]);
@@ -126,21 +137,17 @@ mod tests {
             let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
             if let Ok(private_key) = SecretKey::from_slice(key) {
                 return Ok(ChildPrivKey {
-                    index,
-                    key_mode: KeyMode::Hardened,
+                    key_index: KeyIndex::Hardened(index),
                     extended_key: ExtendedPrivKey {
                         private_key,
                         chain_code: chain_code.to_vec(),
                     },
                 });
             }
-            Err(Error::InvalidIndex)
+            Err(Error::InvalidResultKey)
         }
 
         fn derive_normal_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-            if index >= HARDENDED_KEY_START_INDEX {
-                return Err(Error::IndexOutOfRange);
-            }
             let data = {
                 let mut data = Vec::with_capacity(33);
                 let secp = secp256k1_context();
@@ -163,34 +170,38 @@ mod tests {
                     .add_assign(&self.private_key[..])
                     .expect("add point");
                 return Ok(ChildPrivKey {
-                    index,
-                    key_mode: KeyMode::Normal,
+                    key_index: KeyIndex::Normal(index),
                     extended_key: ExtendedPrivKey {
                         private_key,
                         chain_code: chain_code.to_vec(),
                     },
                 });
             }
-            Err(Error::InvalidIndex)
+            Err(Error::InvalidResultKey)
         }
 
-        pub fn derive_private_key(
-            &self,
-            key_mode: KeyMode,
-            index: u64,
-        ) -> Result<ChildPrivKey, Error> {
-            match key_mode {
-                KeyMode::Hardened => self.derive_hardended_key(index),
-                KeyMode::Normal => self.derive_normal_key(index),
+        pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ChildPrivKey, Error> {
+            if !key_index.is_valid() {
+                return Err(Error::InvalidKeyIndex);
+            }
+            match key_index {
+                KeyIndex::Hardened(index) => self.derive_hardended_key(index),
+                KeyIndex::Normal(index) => self.derive_normal_key(index),
             }
         }
     }
 
     impl ExtendedPubKey {
-        fn derive_public_key(&self, index: u64) -> Result<ChildPubKey, Error> {
-            if index >= HARDENDED_KEY_START_INDEX {
-                return Err(Error::IndexOutOfRange);
+        fn derive_public_key(&self, key_index: KeyIndex) -> Result<ChildPubKey, Error> {
+            if !key_index.is_valid() {
+                return Err(Error::InvalidKeyIndex);
             }
+
+            let index = match key_index {
+                KeyIndex::Normal(i) => i,
+                KeyIndex::Hardened(_) => return Err(Error::InvalidKeyIndex),
+            };
+
             let data = {
                 let mut data = Vec::new();
                 data.extend_from_slice(&self.public_key.serialize());
@@ -205,18 +216,12 @@ mod tests {
             let signature = hmac_sha512(&self.chain_code, &data);
             let sig_bytes = signature.as_ref();
             let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-            println!(
-                "publickey : {:?}, key: {:?}",
-                PublicKey::from_slice(key.clone()),
-                key
-            );
             if let Ok(private_key) = SecretKey::from_slice(key) {
                 let secp = secp256k1_context();
-                let mut public_key = self.public_key.clone();
-                if let Ok(_) = public_key.add_exp_assign(&secp, &private_key[..]) {
+                let mut public_key = self.public_key;
+                if public_key.add_exp_assign(&secp, &private_key[..]).is_ok() {
                     return Ok(ChildPubKey {
-                        index,
-                        key_mode: KeyMode::Normal,
+                        key_index: KeyIndex::Normal(index),
                         extended_key: ExtendedPubKey {
                             public_key,
                             chain_code: chain_code.to_vec(),
@@ -224,7 +229,7 @@ mod tests {
                     });
                 }
             }
-            Err(Error::InvalidIndex)
+            Err(Error::InvalidResultKey)
         }
 
         pub fn from_private_key(extended_key: &ExtendedPrivKey) -> Result<Self, Error> {
@@ -241,8 +246,7 @@ mod tests {
         pub fn from_private_key(child_key: &ChildPrivKey) -> Result<Self, Error> {
             let extended_key = ExtendedPubKey::from_private_key(&child_key.extended_key)?;
             Ok(ChildPubKey {
-                index: child_key.index,
-                key_mode: child_key.key_mode,
+                key_index: child_key.key_index,
                 extended_key,
             })
         }
@@ -289,10 +293,10 @@ mod tests {
     fn derivation_private_child_key_from_private_parent_key() {
         let master_key = fetch_random_key(256);
         master_key
-            .derive_private_key(KeyMode::Hardened, 0)
+            .derive_private_key(KeyIndex::hardened_from_index(0))
             .expect("hardended_key");
         master_key
-            .derive_private_key(KeyMode::Normal, 0)
+            .derive_private_key(KeyIndex::Normal(0))
             .expect("normal_key");
     }
 
@@ -300,14 +304,14 @@ mod tests {
     fn derivation_public_child_key_from_public_parent_key() {
         let master_key = fetch_random_key(256);
         let child_private_key = master_key
-            .derive_private_key(KeyMode::Normal, 0)
+            .derive_private_key(KeyIndex::Normal(0))
             .expect("hardended_key");
         let child_public_key =
             ChildPubKey::from_private_key(&child_private_key).expect("public key");
         let parent_public_key = ExtendedPubKey::from_private_key(&master_key).expect("public key");
         assert_eq!(
             parent_public_key
-                .derive_public_key(0)
+                .derive_public_key(KeyIndex::Normal(0))
                 .expect("derive public key"),
             child_public_key
         )
