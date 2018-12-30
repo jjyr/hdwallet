@@ -4,6 +4,7 @@ version = "0.0.1"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
 license = "MIT"
+repository = "https://github.com/jjyr/hdwallet"
 description = "Hierarchical deterministic wallet (BIP-32)"
 
 [dependencies]
