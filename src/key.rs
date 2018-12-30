@@ -5,14 +5,31 @@ use numext_fixed_uint::U256;
 use rand::Rng;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
+/// Random entropy, part of extended key.
 type ChainCode = Vec<u8>;
 
+/// ExtendedPrivKey is used for child key derivation.
+/// See [secp256k1 crate documentation](https://docs.rs/secp256k1) for SecretKey signatures usage.
+///
+/// # Examples
+///
+/// ```rust
+/// # extern crate hdwallet;
+/// use hdwallet::{ExtendedPrivKey, KeyIndex};
+///
+/// let master_key = ExtendedPrivKey::random().unwrap();
+/// let hardened_key_index = KeyIndex::hardened_from_normalize_index(0).unwrap();
+/// let hardended_child_priv_key = master_key.derive_private_key(hardened_key_index).unwrap();
+/// let normal_key_index = KeyIndex::Normal(0);
+/// let noamal_child_priv_key = master_key.derive_private_key(normal_key_index).unwrap();
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtendedPrivKey {
     pub private_key: SecretKey,
     pub chain_code: ChainCode,
 }
 
+/// Indicate size of random seed used to generate private key, 256 is recommended.
 pub enum KeySeed {
     S128 = 128,
     S256 = 256,
@@ -20,9 +37,11 @@ pub enum KeySeed {
 }
 
 impl ExtendedPrivKey {
+    /// Generate a ExtendedPrivKey, use 256 size random seed.
     pub fn random() -> Result<ExtendedPrivKey, Error> {
         ExtendedPrivKey::random_with_seed_size(KeySeed::S256)
     }
+    /// Generate a ExtendedPrivKey which use 128 or 256 or 512 size random seed.
     pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
         let seed = {
             let mut seed = Vec::with_capacity(seed_size as usize);
@@ -102,6 +121,7 @@ impl ExtendedPrivKey {
         Err(Error::InvalidResultKey)
     }
 
+    /// Derive a ChildPrivKey from ExtendedPrivKey.
     pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ChildPrivKey, Error> {
         if !key_index.is_valid() {
             return Err(Error::InvalidKeyIndex);
@@ -113,6 +133,26 @@ impl ExtendedPrivKey {
     }
 }
 
+/// ExtendedPubKey is used for public child key derivation.
+/// See [secp256k1 crate documentation](https://docs.rs/secp256k1) for PublicKey signatures usage.
+///
+/// # Examples
+///
+/// ```rust
+/// # extern crate hdwallet;
+/// use hdwallet::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
+///
+/// let priv_key = ExtendedPrivKey::random().unwrap();
+/// let pub_key = ExtendedPubKey::from_private_key(&priv_key).unwrap();
+///
+/// // Public hardened child key derivation from parent public key is impossible
+/// let hardened_key_index = KeyIndex::hardened_from_normalize_index(0).unwrap();
+/// assert!(pub_key.derive_public_key(hardened_key_index).is_err());
+///
+/// // Derive public normal child key
+/// let normal_key_index = KeyIndex::Normal(0);
+/// assert!(pub_key.derive_public_key(normal_key_index).is_ok());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExtendedPubKey {
     pub public_key: PublicKey,
@@ -120,6 +160,8 @@ pub struct ExtendedPubKey {
 }
 
 impl ExtendedPubKey {
+    /// Derive public normal child key from ExtendedPubKey,
+    /// will return error if key_index is a hardened key.
     pub fn derive_public_key(&self, key_index: KeyIndex) -> Result<ChildPubKey, Error> {
         if !key_index.is_valid() {
             return Err(Error::InvalidKeyIndex);
@@ -160,6 +202,7 @@ impl ExtendedPubKey {
         Err(Error::InvalidResultKey)
     }
 
+    /// ExtendedPubKey from ExtendedPrivKey
     pub fn from_private_key(extended_key: &ExtendedPrivKey) -> Result<Self, Error> {
         let secp = Secp256k1::new();
         let public_key = PublicKey::from_secret_key(&secp, &extended_key.private_key);
@@ -170,12 +213,32 @@ impl ExtendedPubKey {
     }
 }
 
+/// ChildPrivKey, derive from ExtendedPrivKey
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildPrivKey {
     pub key_index: KeyIndex,
     pub extended_key: ExtendedPrivKey,
 }
 
+/// ChildPubKey derive from ExtendedPubKey, or from ChildPrivKey
+///
+/// # Examples
+///
+/// ```rust
+/// # extern crate hdwallet;
+/// use hdwallet::{ExtendedPrivKey, ExtendedPubKey, ChildPubKey, KeyIndex};
+///
+/// let priv_key = ExtendedPrivKey::random().unwrap();
+/// let pub_key = ExtendedPubKey::from_private_key(&priv_key).unwrap();
+///
+/// // Derive public normal child key
+/// let normal_key_index = KeyIndex::Normal(0);
+/// let child_pub_key = pub_key.derive_public_key(normal_key_index).unwrap();
+///
+/// // Generate public child key from private child key
+/// let child_priv_key = priv_key.derive_private_key(KeyIndex::Normal(0)).unwrap();
+/// assert_eq!(child_pub_key, ChildPubKey::from_private_key(&child_priv_key).unwrap());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildPubKey {
     pub key_index: KeyIndex,

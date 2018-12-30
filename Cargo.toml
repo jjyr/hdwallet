@@ -1,10 +1,10 @@
 [package]
 name = "hdwallet"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
 license = "MIT"
-description = "Hierarchical deterministic wallets framework"
+description = "Hierarchical deterministic wallet (BIP-32)"
 
 [dependencies]
 secp256k1 = "0.12"
