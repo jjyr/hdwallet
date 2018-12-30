@@ -1,8 +1,11 @@
 use crate::error::Error;
 use crate::key_index::KeyIndex;
-use crate::util::hmac_sha512;
 use numext_fixed_uint::U256;
 use rand::Rng;
+use ring::{
+    digest,
+    hmac::{SigningContext, SigningKey},
+};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 /// Random entropy, part of extended key.
@@ -43,13 +46,15 @@ impl ExtendedPrivKey {
     }
     /// Generate a ExtendedPrivKey which use 128 or 256 or 512 size random seed.
     pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
-        let seed = {
+        let signature = {
             let mut seed = Vec::with_capacity(seed_size as usize);
             let mut rng = rand::thread_rng();
             rng.fill(seed.as_mut_slice());
-            seed
+            let signing_key = SigningKey::new(&digest::SHA512, b"Bitcoin seed");
+            let mut h = SigningContext::with_key(&signing_key);
+            h.update(&seed);
+            h.sign()
         };
-        let signature = hmac_sha512(b"Bitcoin seed", &seed);
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(private_key) = SecretKey::from_slice(key) {
@@ -62,19 +67,18 @@ impl ExtendedPrivKey {
     }
 
     fn derive_hardended_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-        let data = {
-            let mut data = Vec::with_capacity(33);
-            data.extend_from_slice(&[0x00]);
-            data.extend_from_slice(&self.private_key[..]);
+        let signature = {
+            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+            let mut h = SigningContext::with_key(&signing_key);
+            h.update(&[0x00]);
+            h.update(&self.private_key[..]);
             let mut ser_index = [0u8; 32];
             U256::from(index)
                 .into_big_endian(&mut ser_index)
                 .expect("big_endian encode");
-            data.extend_from_slice(&ser_index);
-            data
+            h.update(&ser_index);
+            h.sign()
         };
-        assert_eq!(data.len(), 65);
-        let signature = hmac_sha512(&self.chain_code, &data);
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(private_key) = SecretKey::from_slice(key) {
@@ -90,20 +94,19 @@ impl ExtendedPrivKey {
     }
 
     fn derive_normal_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-        let data = {
-            let mut data = Vec::with_capacity(33);
+        let signature = {
+            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+            let mut h = SigningContext::with_key(&signing_key);
             let secp = Secp256k1::new();
             let ser_public_key = PublicKey::from_secret_key(&secp, &self.private_key).serialize();
-            data.extend_from_slice(&ser_public_key[..]);
+            h.update(&ser_public_key[..]);
             let mut ser_index = [0u8; 32];
             U256::from(index)
                 .into_big_endian(&mut ser_index)
                 .expect("big_endian encode");
-            data.extend_from_slice(&ser_index);
-            data
+            h.update(&ser_index);
+            h.sign()
         };
-        assert_eq!(data.len(), 65);
-        let signature = hmac_sha512(&self.chain_code, &data);
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(mut private_key) = SecretKey::from_slice(key) {
@@ -172,18 +175,17 @@ impl ExtendedPubKey {
             KeyIndex::Hardened(_) => return Err(Error::InvalidKeyIndex),
         };
 
-        let data = {
-            let mut data = Vec::new();
-            data.extend_from_slice(&self.public_key.serialize());
+        let signature = {
+            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+            let mut h = SigningContext::with_key(&signing_key);
+            h.update(&self.public_key.serialize());
             let mut ser_index = [0u8; 32];
             U256::from(index)
                 .into_big_endian(&mut ser_index)
                 .expect("big_endian encode");
-            data.extend_from_slice(&ser_index);
-            data
+            h.update(&ser_index);
+            h.sign()
         };
-        assert_eq!(data.len(), 65);
-        let signature = hmac_sha512(&self.chain_code, &data);
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(private_key) = SecretKey::from_slice(key) {
