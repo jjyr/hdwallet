@@ -1,7 +1,7 @@
 use crate::error::Error;
 
-const HARDENDED_KEY_START_INDEX: u64 = 2_147_483_648; // 2 ** 31
-const HARDENDED_KEY_END_INDEX: u64 = 4_294_967_295; // 2 ** 32 - 1
+const HARDENED_KEY_START_INDEX: u64 = 2_147_483_648; // 2 ** 31
+const HARDENED_KEY_END_INDEX: u64 = 4_294_967_295; // 2 ** 32 - 1
 
 /// KeyIndex indicates the key type and index of a child key.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -35,7 +35,7 @@ impl KeyIndex {
     pub fn normalize_index(&self) -> u64 {
         match self {
             KeyIndex::Normal(i) => *i,
-            KeyIndex::Hardened(i) => *i - HARDENDED_KEY_START_INDEX,
+            KeyIndex::Hardened(i) => *i - HARDENED_KEY_START_INDEX,
         }
     }
 
@@ -54,10 +54,8 @@ impl KeyIndex {
     /// ```
     pub fn is_valid(&self) -> bool {
         match self {
-            KeyIndex::Normal(i) => *i < HARDENDED_KEY_START_INDEX,
-            KeyIndex::Hardened(i) => {
-                *i >= HARDENDED_KEY_START_INDEX && *i <= HARDENDED_KEY_END_INDEX
-            }
+            KeyIndex::Normal(i) => *i < HARDENED_KEY_START_INDEX,
+            KeyIndex::Hardened(i) => *i >= HARDENED_KEY_START_INDEX && *i <= HARDENED_KEY_END_INDEX,
         }
     }
 
@@ -77,9 +75,9 @@ impl KeyIndex {
     /// assert_eq!(hardened_index_zero, KeyIndex::Hardened(2_147_483_648));
     /// ```
     pub fn hardened_from_normalize_index(i: u64) -> Result<KeyIndex, Error> {
-        if i < HARDENDED_KEY_START_INDEX {
-            Ok(KeyIndex::Hardened(HARDENDED_KEY_START_INDEX + i))
-        } else if i <= HARDENDED_KEY_END_INDEX {
+        if i < HARDENED_KEY_START_INDEX {
+            Ok(KeyIndex::Hardened(HARDENED_KEY_START_INDEX + i))
+        } else if i <= HARDENED_KEY_END_INDEX {
             Ok(KeyIndex::Hardened(i))
         } else {
             Err(Error::IndexOutRange)
@@ -100,9 +98,9 @@ impl KeyIndex {
     /// assert_eq!(hardened_key, KeyIndex::Hardened(2_147_483_648));
     /// ```
     pub fn from_index(i: u64) -> Result<Self, Error> {
-        if i < HARDENDED_KEY_START_INDEX {
+        if i < HARDENED_KEY_START_INDEX {
             Ok(KeyIndex::Normal(i))
-        } else if i <= HARDENDED_KEY_END_INDEX {
+        } else if i <= HARDENED_KEY_END_INDEX {
             Ok(KeyIndex::Hardened(i))
         } else {
             Err(Error::IndexOutRange)
