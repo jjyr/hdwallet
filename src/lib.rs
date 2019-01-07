@@ -9,6 +9,7 @@
 //! inside structure, which means child keys can also as an extended key to derive new child keys.
 //! * [`Error`] errors.
 
+mod chain_path;
 mod error;
 mod key;
 mod key_index;
