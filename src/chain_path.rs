@@ -11,6 +11,7 @@ pub struct PathError {
     reason: String,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum ChainPath {
     Root,
     Node(Box<ChainPath>, KeyIndex),
@@ -40,7 +41,7 @@ impl ChainPath {
             let is_hardened = HARDENED_SYMBOLS.contains(&last_char);
             let key_index = {
                 let index_result = if is_hardened {
-                    sub_path[..sub_path.len() - 2].parse::<u64>()
+                    sub_path[..sub_path.len() - 1].parse::<u64>()
                 } else {
                     sub_path[..].parse::<u64>()
                 };
@@ -69,13 +70,38 @@ impl ChainPath {
     }
 
     pub fn to_string(&self) -> String {
-        unimplemented!()
+        let mut path = self;
+        let mut path_levels: Vec<String> = Vec::new();
+        loop {
+            match path {
+                ChainPath::Root => {
+                    path_levels.push("m".into());
+                    break;
+                }
+                ChainPath::Node(parent_path, key_index) => {
+                    let s = match key_index {
+                        KeyIndex::Normal(i) => i.to_string(),
+                        KeyIndex::Hardened(i) => format!("{}H", i),
+                    };
+                    path_levels.push(s);
+                    path = parent_path;
+                }
+            }
+        }
+        path_levels.reverse();
+        path_levels.join("/")
     }
 }
 
 impl From<String> for ChainPath {
     fn from(path: String) -> Self {
         ChainPath::from_string(path).expect("into chain path")
+    }
+}
+
+impl From<&str> for ChainPath {
+    fn from(path: &str) -> Self {
+        ChainPath::from_string(path.into()).expect("into chain path")
     }
 }
 
@@ -88,5 +114,65 @@ impl Into<String> for ChainPath {
 impl fmt::Display for ChainPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_chain_path() {
+        assert_eq!(ChainPath::Root.to_string(), "m");
+        assert_eq!(
+            ChainPath::Node(Box::new(ChainPath::Root), KeyIndex::Normal(1)).to_string(),
+            "m/1"
+        );
+        assert_eq!(
+            ChainPath::Node(
+                Box::new(ChainPath::Node(
+                    Box::new(ChainPath::Root),
+                    KeyIndex::hardened_from_normalize_index(1).unwrap()
+                )),
+                KeyIndex::Normal(1)
+            )
+            .to_string(),
+            "m/2147483649H/1"
+        );
+    }
+
+    #[test]
+    fn test_chain_path_from_string() {
+        assert_eq!(ChainPath::from("m"), ChainPath::Root);
+        assert_eq!(
+            ChainPath::from("m/1"),
+            ChainPath::Node(Box::new(ChainPath::Root), KeyIndex::Normal(1))
+        );
+        assert_eq!(
+            ChainPath::from("m/2147483649H/1"),
+            ChainPath::Node(
+                Box::new(ChainPath::Node(
+                    Box::new(ChainPath::Root),
+                    KeyIndex::hardened_from_normalize_index(1).unwrap()
+                )),
+                KeyIndex::Normal(1)
+            )
+        );
+        // alternative hardened key represent
+        assert_eq!(
+            ChainPath::from("m/2147483649'/1"),
+            ChainPath::Node(
+                Box::new(ChainPath::Node(
+                    Box::new(ChainPath::Root),
+                    KeyIndex::hardened_from_normalize_index(1).unwrap()
+                )),
+                KeyIndex::Normal(1)
+            )
+        );
+        // from invalid string
+        assert!(ChainPath::from_string("m/2147483649h/1".into()).is_err());
+        assert!(ChainPath::from_string("/2147483649H/1".into()).is_err());
+        assert!(ChainPath::from_string("2147483649H/1".into()).is_err());
+        assert!(ChainPath::from_string("a".into()).is_err());
     }
 }
