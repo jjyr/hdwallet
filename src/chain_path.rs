@@ -11,6 +11,24 @@ pub struct PathError {
     reason: String,
 }
 
+/// ChainPath is used to describe BIP-32 KeyChain path.
+///
+/// # Examples
+///
+/// ``` rust
+/// # extern crate hdwallet;
+/// use hdwallet::{ChainPath, KeyIndex};
+///
+/// let chain_path = ChainPath::Node(
+///     Box::new(ChainPath::Node(
+///         Box::new(ChainPath::Root),
+///         KeyIndex::hardened_from_normalize_index(1).unwrap()
+///     )),
+///     KeyIndex::Normal(1)
+/// );
+/// assert_eq!(chain_path.to_string(), "m/2147483649H/1");
+/// assert_eq!(ChainPath::from("m/2147483649H/1"), chain_path);
+/// ```
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChainPath {
     Root,
@@ -18,6 +36,7 @@ pub enum ChainPath {
 }
 
 impl ChainPath {
+    /// Convert string represent chain path to ChainPath
     pub fn from_string(path: String) -> Result<ChainPath, PathError> {
         let mut iter = path.split_terminator(SEPARATOR);
         if iter.next() != Some(MASTER_SYMBOL) {
@@ -69,6 +88,7 @@ impl ChainPath {
         Ok(chain_path)
     }
 
+    /// Convert ChainPath to string represent format
     pub fn to_string(&self) -> String {
         let mut path = self;
         let mut path_levels: Vec<String> = Vec::new();
