@@ -1,5 +1,6 @@
 use crate::KeyIndex;
 use std::fmt;
+use std::str::FromStr;
 
 const MASTER_SYMBOL: &str = "m";
 const HARDENED_SYMBOLS: [&str; 2] = ["H", "'"];
@@ -36,8 +37,35 @@ pub enum ChainPath {
 }
 
 impl ChainPath {
-    /// Convert string represent chain path to ChainPath
-    pub fn from_string(path: String) -> Result<ChainPath, PathError> {
+    /// Convert ChainPath to string represent format
+    fn to_string(&self) -> String {
+        let mut path = self;
+        let mut path_levels: Vec<String> = Vec::new();
+        loop {
+            match path {
+                ChainPath::Root => {
+                    path_levels.push("m".into());
+                    break;
+                }
+                ChainPath::Node(parent_path, key_index) => {
+                    let s = match key_index {
+                        KeyIndex::Normal(i) => i.to_string(),
+                        KeyIndex::Hardened(i) => format!("{}H", i),
+                    };
+                    path_levels.push(s);
+                    path = parent_path;
+                }
+            }
+        }
+        path_levels.reverse();
+        path_levels.join("/")
+    }
+}
+
+impl FromStr for ChainPath {
+    type Err = PathError;
+    /// Convert &str represent chain path to ChainPath
+    fn from_str(path: &str) -> Result<Self, Self::Err> {
         let mut iter = path.split_terminator(SEPARATOR);
         if iter.next() != Some(MASTER_SYMBOL) {
             return Err(PathError {
@@ -87,41 +115,17 @@ impl ChainPath {
         }
         Ok(chain_path)
     }
-
-    /// Convert ChainPath to string represent format
-    pub fn to_string(&self) -> String {
-        let mut path = self;
-        let mut path_levels: Vec<String> = Vec::new();
-        loop {
-            match path {
-                ChainPath::Root => {
-                    path_levels.push("m".into());
-                    break;
-                }
-                ChainPath::Node(parent_path, key_index) => {
-                    let s = match key_index {
-                        KeyIndex::Normal(i) => i.to_string(),
-                        KeyIndex::Hardened(i) => format!("{}H", i),
-                    };
-                    path_levels.push(s);
-                    path = parent_path;
-                }
-            }
-        }
-        path_levels.reverse();
-        path_levels.join("/")
-    }
 }
 
 impl From<String> for ChainPath {
     fn from(path: String) -> Self {
-        ChainPath::from_string(path).expect("into chain path")
+        ChainPath::from_str(&path).expect("into chain path")
     }
 }
 
 impl From<&str> for ChainPath {
     fn from(path: &str) -> Self {
-        ChainPath::from_string(path.into()).expect("into chain path")
+        ChainPath::from_str(path).expect("into chain path")
     }
 }
 
@@ -162,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn test_chain_path_from_string() {
+    fn test_chain_path_from_str() {
         assert_eq!(ChainPath::from("m"), ChainPath::Root);
         assert_eq!(
             ChainPath::from("m/1"),
@@ -190,9 +194,9 @@ mod tests {
             )
         );
         // from invalid string
-        assert!(ChainPath::from_string("m/2147483649h/1".into()).is_err());
-        assert!(ChainPath::from_string("/2147483649H/1".into()).is_err());
-        assert!(ChainPath::from_string("2147483649H/1".into()).is_err());
-        assert!(ChainPath::from_string("a".into()).is_err());
+        assert!(ChainPath::from_str("m/2147483649h/1").is_err());
+        assert!(ChainPath::from_str("/2147483649H/1").is_err());
+        assert!(ChainPath::from_str("2147483649H/1").is_err());
+        assert!(ChainPath::from_str("a").is_err());
     }
 }

@@ -18,3 +18,4 @@ pub use crate::chain_path::{ChainPath, PathError};
 pub use crate::error::Error;
 pub use crate::key::{ChildPrivKey, ChildPubKey, ExtendedPrivKey, ExtendedPubKey, KeySeed};
 pub use crate::key_index::KeyIndex;
+pub use secp256k1;
