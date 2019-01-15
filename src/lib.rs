@@ -14,7 +14,7 @@ mod error;
 mod key;
 mod key_index;
 
-pub use crate::chain_path::{ChainPath, SubPath, SubPathError};
+pub use crate::chain_path::{ChainPath, Error as ChainPathError, SubPath};
 pub use crate::error::Error;
 pub use crate::key::{ChildPrivKey, ChildPubKey, ExtendedPrivKey, ExtendedPubKey, KeySeed};
 pub use crate::key_index::KeyIndex;

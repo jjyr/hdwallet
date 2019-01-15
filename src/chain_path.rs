@@ -5,8 +5,8 @@ const MASTER_SYMBOL: &str = "m";
 const HARDENED_SYMBOLS: [&str; 2] = ["H", "'"];
 const SEPARATOR: char = '/';
 
-#[derive(Clone, Debug)]
-pub enum SubPathError {
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+pub enum Error {
     Invalid,
     Blank,
     KeyIndexOutOfRange,
@@ -35,7 +35,7 @@ pub struct ChainPath(String);
 
 impl ChainPath {
     /// An SubPath iterator over the ChainPath from Root to child keys.
-    pub fn iter(&self) -> impl Iterator<Item = Result<SubPath, SubPathError>> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = Result<SubPath, Error>> + '_ {
         Iter(self.0.split_terminator(SEPARATOR))
     }
 
@@ -58,7 +58,7 @@ pub enum SubPath {
 pub struct Iter<'a, I: Iterator<Item = &'a str>>(I);
 
 impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
-    type Item = Result<SubPath, SubPathError>;
+    type Item = Result<SubPath, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|sub_path| {
@@ -66,7 +66,7 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
                 return Ok(SubPath::Root);
             }
             if sub_path.is_empty() {
-                return Err(SubPathError::Blank);
+                return Err(Error::Blank);
             }
             let last_char = &sub_path[(sub_path.len() - 1)..];
             let is_hardened = HARDENED_SYMBOLS.contains(&last_char);
@@ -78,11 +78,11 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
                 };
                 let index = match index_result {
                     Ok(index) => index,
-                    Err(_) => return Err(SubPathError::Invalid),
+                    Err(_) => return Err(Error::Invalid),
                 };
                 match KeyIndex::from_index(index) {
                     Ok(key_index) => key_index,
-                    Err(_) => return Err(SubPathError::KeyIndexOutOfRange),
+                    Err(_) => return Err(Error::KeyIndexOutOfRange),
                 }
             };
             Ok(SubPath::Child(key_index))
