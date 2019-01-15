@@ -12,10 +12,12 @@
 mod chain_path;
 mod error;
 mod key;
+mod key_chain;
 mod key_index;
 
 pub use crate::chain_path::{ChainPath, Error as ChainPathError, SubPath};
 pub use crate::error::Error;
 pub use crate::key::{ChildPrivKey, ChildPubKey, ExtendedPrivKey, ExtendedPubKey, KeySeed};
+pub use crate::key_chain::{DefaultKeyChain, KeyChain};
 pub use crate::key_index::KeyIndex;
 pub use secp256k1;

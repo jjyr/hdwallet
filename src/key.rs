@@ -40,16 +40,24 @@ pub enum KeySeed {
 }
 
 impl ExtendedPrivKey {
-    /// Generate a ExtendedPrivKey, use 256 size random seed.
+    /// Generate an ExtendedPrivKey, use 256 size random seed.
     pub fn random() -> Result<ExtendedPrivKey, Error> {
         ExtendedPrivKey::random_with_seed_size(KeySeed::S256)
     }
-    /// Generate a ExtendedPrivKey which use 128 or 256 or 512 size random seed.
+    /// Generate an ExtendedPrivKey which use 128 or 256 or 512 size random seed.
     pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
-        let signature = {
+        let seed = {
             let mut seed = Vec::with_capacity(seed_size as usize);
             let mut rng = rand::thread_rng();
             rng.fill(seed.as_mut_slice());
+            seed
+        };
+        Self::with_seed(&seed)
+    }
+
+    /// Generate an ExtendedPrivKey from seed
+    pub fn with_seed(seed: &[u8]) -> Result<ExtendedPrivKey, Error> {
+        let signature = {
             let signing_key = SigningKey::new(&digest::SHA512, b"Bitcoin seed");
             let mut h = SigningContext::with_key(&signing_key);
             h.update(&seed);
