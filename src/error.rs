@@ -1,3 +1,5 @@
+use crate::ChainPathError;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {
     /// Use a wrong KeyIndex
@@ -6,4 +8,12 @@ pub enum Error {
     IndexOutRange,
     /// Key is invalid, should try next index.
     InvalidResultKey,
+    /// ChainPathError
+    ChainPath(ChainPathError),
+}
+
+impl From<ChainPathError> for Error {
+    fn from(err: ChainPathError) -> Error {
+        Error::ChainPath(err)
+    }
 }
