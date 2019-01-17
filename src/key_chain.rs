@@ -2,7 +2,6 @@ use crate::{ChainPath, ChainPathError, Error, ExtendedPrivKey, SubPath};
 
 pub trait KeyChain {
     fn fetch_key(&self, chain_path: ChainPath) -> Result<ExtendedPrivKey, Error>;
-    fn discover(&self) -> Box<Iterator<Item = (ChainPath, ExtendedPrivKey)>>;
 }
 
 pub struct DefaultKeyChain {
@@ -32,10 +31,6 @@ impl KeyChain for DefaultKeyChain {
             }
         }
         Ok(key)
-    }
-
-    fn discover(&self) -> Box<Iterator<Item = (ChainPath, ExtendedPrivKey)>> {
-        unimplemented!()
     }
 }
 
