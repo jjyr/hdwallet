@@ -73,38 +73,33 @@ impl ExtendedPrivKey {
         Err(Error::InvalidResultKey)
     }
 
-    fn derive_hardended_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-        let signature = {
-            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
-            let mut h = SigningContext::with_key(&signing_key);
-            h.update(&[0x00]);
-            h.update(&self.private_key[..]);
-            h.update(&index.to_be_bytes());
-            h.sign()
-        };
-        let sig_bytes = signature.as_ref();
-        let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-        if let Ok(private_key) = SecretKey::from_slice(key) {
-            return Ok(ChildPrivKey {
-                key_index: KeyIndex::Hardened(index),
-                extended_key: ExtendedPrivKey {
-                    private_key,
-                    chain_code: chain_code.to_vec(),
-                },
-            });
-        }
-        Err(Error::InvalidResultKey)
+    fn sign_hardended_key(&self, index: u32) -> ring::hmac::Signature {
+        let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+        let mut h = SigningContext::with_key(&signing_key);
+        h.update(&[0x00]);
+        h.update(&self.private_key[..]);
+        h.update(&index.to_be_bytes());
+        h.sign()
     }
 
-    fn derive_normal_key(&self, index: u64) -> Result<ChildPrivKey, Error> {
-        let signature = {
-            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
-            let mut h = SigningContext::with_key(&signing_key);
-            let secp = Secp256k1::new();
-            let ser_public_key = PublicKey::from_secret_key(&secp, &self.private_key).serialize();
-            h.update(&ser_public_key[..]);
-            h.update(&index.to_be_bytes());
-            h.sign()
+    fn sign_normal_key(&self, index: u32) -> ring::hmac::Signature {
+        let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+        let mut h = SigningContext::with_key(&signing_key);
+        let secp = Secp256k1::new();
+        let public_key = PublicKey::from_secret_key(&secp, &self.private_key);
+        h.update(&public_key.serialize());
+        h.update(&index.to_be_bytes());
+        h.sign()
+    }
+
+    /// Derive a ChildPrivKey from ExtendedPrivKey.
+    pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ChildPrivKey, Error> {
+        if !key_index.is_valid() {
+            return Err(Error::InvalidKeyIndex);
+        }
+        let signature = match key_index {
+            KeyIndex::Hardened(index) => self.sign_hardended_key(index),
+            KeyIndex::Normal(index) => self.sign_normal_key(index),
         };
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
@@ -113,7 +108,7 @@ impl ExtendedPrivKey {
                 .add_assign(&self.private_key[..])
                 .expect("add point");
             return Ok(ChildPrivKey {
-                key_index: KeyIndex::Normal(index),
+                key_index,
                 extended_key: ExtendedPrivKey {
                     private_key,
                     chain_code: chain_code.to_vec(),
@@ -121,17 +116,6 @@ impl ExtendedPrivKey {
             });
         }
         Err(Error::InvalidResultKey)
-    }
-
-    /// Derive a ChildPrivKey from ExtendedPrivKey.
-    pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ChildPrivKey, Error> {
-        if !key_index.is_valid() {
-            return Err(Error::InvalidKeyIndex);
-        }
-        match key_index {
-            KeyIndex::Hardened(index) => self.derive_hardended_key(index),
-            KeyIndex::Normal(index) => self.derive_normal_key(index),
-        }
     }
 }
 
