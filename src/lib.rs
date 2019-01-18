@@ -21,7 +21,7 @@ pub use crate::error::Error;
 pub use crate::key::{
     ChildKey, ChildPrivKey, ChildPubKey, ExtendedKey, ExtendedPrivKey, ExtendedPubKey, KeySeed,
 };
-pub use crate::key_chain::{DefaultKeyChain, KeyChain, KeyInfo};
+pub use crate::key_chain::{DefaultKeyChain, KeyChain};
 pub use crate::key_index::KeyIndex;
 pub use crate::serialize::Serialize;
 pub use secp256k1;
