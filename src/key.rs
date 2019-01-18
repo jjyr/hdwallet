@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::key_index::KeyIndex;
-use numext_fixed_uint::U256;
 use rand::Rng;
 use ring::{
     digest,
@@ -80,11 +79,7 @@ impl ExtendedPrivKey {
             let mut h = SigningContext::with_key(&signing_key);
             h.update(&[0x00]);
             h.update(&self.private_key[..]);
-            let mut ser_index = [0u8; 32];
-            U256::from(index)
-                .into_big_endian(&mut ser_index)
-                .expect("big_endian encode");
-            h.update(&ser_index);
+            h.update(&index.to_be_bytes());
             h.sign()
         };
         let sig_bytes = signature.as_ref();
@@ -108,11 +103,7 @@ impl ExtendedPrivKey {
             let secp = Secp256k1::new();
             let ser_public_key = PublicKey::from_secret_key(&secp, &self.private_key).serialize();
             h.update(&ser_public_key[..]);
-            let mut ser_index = [0u8; 32];
-            U256::from(index)
-                .into_big_endian(&mut ser_index)
-                .expect("big_endian encode");
-            h.update(&ser_index);
+            h.update(&index.to_be_bytes());
             h.sign()
         };
         let sig_bytes = signature.as_ref();
@@ -187,11 +178,7 @@ impl ExtendedPubKey {
             let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
             let mut h = SigningContext::with_key(&signing_key);
             h.update(&self.public_key.serialize());
-            let mut ser_index = [0u8; 32];
-            U256::from(index)
-                .into_big_endian(&mut ser_index)
-                .expect("big_endian encode");
-            h.update(&ser_index);
+            h.update(&index.to_be_bytes());
             h.sign()
         };
         let sig_bytes = signature.as_ref();
@@ -221,6 +208,13 @@ impl ExtendedPubKey {
             chain_code: extended_key.chain_code.clone(),
         })
     }
+}
+
+/// ChildKey
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExtendedKey {
+    PrivKey(ExtendedPrivKey),
+    PubKey(ExtendedPubKey),
 }
 
 /// ChildPrivKey, derive from ExtendedPrivKey
@@ -263,6 +257,13 @@ impl ChildPubKey {
             extended_key,
         })
     }
+}
+
+/// ChildKey
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChildKey {
+    PrivKey(ChildPrivKey),
+    PubKey(ChildPubKey),
 }
 
 #[cfg(test)]
