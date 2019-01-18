@@ -71,19 +71,23 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
             let last_char = &sub_path[(sub_path.len() - 1)..];
             let is_hardened = HARDENED_SYMBOLS.contains(&last_char);
             let key_index = {
-                let index_result = if is_hardened {
-                    sub_path[..sub_path.len() - 1].parse::<u64>()
+                let key_index_result = if is_hardened {
+                    sub_path[..sub_path.len() - 1]
+                        .parse::<u32>()
+                        .map_err(|_| Error::Invalid)
+                        .and_then(|index| {
+                            KeyIndex::hardened_from_normalize_index(index)
+                                .map_err(|_| Error::KeyIndexOutOfRange)
+                        })
                 } else {
-                    sub_path[..].parse::<u64>()
+                    sub_path[..]
+                        .parse::<u32>()
+                        .map_err(|_| Error::Invalid)
+                        .and_then(|index| {
+                            KeyIndex::from_index(index).map_err(|_| Error::KeyIndexOutOfRange)
+                        })
                 };
-                let index = match index_result {
-                    Ok(index) => index,
-                    Err(_) => return Err(Error::Invalid),
-                };
-                match KeyIndex::from_index(index) {
-                    Ok(key_index) => key_index,
-                    Err(_) => return Err(Error::KeyIndexOutOfRange),
-                }
+                key_index_result?
             };
             Ok(SubPath::Child(key_index))
         })
@@ -93,6 +97,12 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
 impl From<String> for ChainPath {
     fn from(path: String) -> Self {
         ChainPath(path)
+    }
+}
+
+impl From<&str> for ChainPath {
+    fn from(path: &str) -> Self {
+        ChainPath(path.to_string())
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -10,8 +10,10 @@ description = "Hierarchical deterministic wallet (BIP-32)"
 [dependencies]
 secp256k1 = "0.12"
 rand = "0.6.1"
-ring = "0.14.0-alpha2"
+ring = "0.14.0"
 
 [dev-dependencies]
 hex = "0.3.2"
+base58 = "0.1.0"
+ripemd160 = "0.8.0"
 
