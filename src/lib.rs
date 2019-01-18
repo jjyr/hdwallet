@@ -3,10 +3,12 @@
 //! This crate is build upon secp256k1 crate, only provide BIP-32 related features, for signatures
 //! see the original [secp256k1 documentation](https://docs.rs/secp256k1).
 //!
-//! * [`ExtendedPrivKey`] and [`ExtendedPubKey`] as BIP-32 described is used for key derivation
-//! * [`KeyIndex`] is a simple enum indicate the index and type of child key.
-//! * [`ChildPrivKey`] and [`ChildPubKey`] represent child key pair, note the field `extended_key`
-//! inside structure, which means child keys can also as an extended key to derive new child keys.
+//! * [`ChainPath`] and [`KeyChain`] used to derivation child keys from string represented path.
+//! * [`HDKey`] return value of `key_chain.fetch_key`, `HDKey` represent a derivated key which
+//! include a `ExtendedPrivKey` and other derivation info.
+//! * [`ExtendedPrivKey`] and [`ExtendedPubKey`] as BIP-32 described it is basic struct in `hdwallet`.
+//! * [`KeyIndex`] is a simple enum indicate the index and type of child key(Normal key or Hardened
+//! key).
 //! * [`Error`] errors.
 
 mod chain_path;

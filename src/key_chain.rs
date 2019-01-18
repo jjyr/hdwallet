@@ -2,12 +2,30 @@ use crate::{ChainPath, ChainPathError, Error, ExtendedPrivKey, KeyIndex, SubPath
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HDKey {
+    /// depth, 0 if it is master key
     pub depth: u8,
+    /// parent key
     pub parent_key: Option<ExtendedPrivKey>,
+    /// key_index which used with parent key to derive this key
     pub key_index: Option<KeyIndex>,
+    /// private extended key, used for sign/verify or derivation keys
     pub key: ExtendedPrivKey,
 }
 
+/// KeyChain is used for derivation HDKey from master_key and chain_path.
+///
+/// # Examples
+///
+/// ```rust
+/// # extern crate hdwallet;
+/// use hdwallet::{KeyChain, DefaultKeyChain, ChainPath, ExtendedPrivKey};
+///
+/// let master_key = ExtendedPrivKey::random().unwrap();
+/// let key_chain = DefaultKeyChain::new(master_key);
+/// let child_key = key_chain.fetch_key("m/0H/1".into()).unwrap();
+/// assert_eq!(child_key, key_chain.fetch_key("m/0'/1".into()).unwrap());
+/// dbg!(child_key);
+/// ```
 pub trait KeyChain {
     fn fetch_key(&self, chain_path: ChainPath) -> Result<HDKey, Error>;
 }
@@ -160,10 +178,6 @@ mod tests {
         } else {
             hex::decode(hex_string).expect("decode")
         }
-    }
-
-    fn to_hex(bytes: &[u8]) -> String {
-        hex::encode(bytes)
     }
 
     #[test]
