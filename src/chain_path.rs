@@ -100,6 +100,12 @@ impl From<String> for ChainPath {
     }
 }
 
+impl From<&str> for ChainPath {
+    fn from(path: &str) -> Self {
+        ChainPath(path.to_string())
+    }
+}
+
 impl fmt::Display for ChainPath {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_string())
