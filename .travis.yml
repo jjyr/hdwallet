@@ -1,14 +1,11 @@
 language: rust
+rust:
+  - stable
+  - beta
+  - nightly
 matrix:
-  include:
-  - rust: stable
-  - rust: beta
-  - rust: nightly
-    env: ALLOW_FAILURES=true
   allow_failures:
     - rust: nightly
-      env: ALLOW_FAILURES=true
-      fast_finish: true
 cache: cargo
 script:
   - rustup component add clippy && cargo clippy --all-targets --all-features -- -D warnings
