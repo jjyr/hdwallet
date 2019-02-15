@@ -51,7 +51,7 @@ impl ExtendedPrivKey {
     /// Generate an ExtendedPrivKey which use 128 or 256 or 512 size random seed.
     pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
         let seed = {
-            let mut seed = Vec::with_capacity(seed_size as usize);
+            let mut seed = vec![0; seed_size as usize];
             let mut rng = rand::thread_rng();
             rng.fill(seed.as_mut_slice());
             seed
@@ -276,6 +276,14 @@ mod tests {
             }
         }
         panic!("can't generate valid ExtendedPrivKey");
+    }
+
+    #[test]
+    fn random_seed_not_empty() {
+        assert_ne!(
+            fetch_random_key(),
+            ExtendedPrivKey::with_seed(&[]).expect("privkey")
+        );
     }
 
     #[test]
