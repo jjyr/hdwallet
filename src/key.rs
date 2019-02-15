@@ -5,7 +5,12 @@ use ring::{
     digest,
     hmac::{SigningContext, SigningKey},
 };
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
+use secp256k1::{PublicKey, Secp256k1, SecretKey, SignOnly, VerifyOnly};
+
+lazy_static! {
+    static ref SECP256K1_SIGN_ONLY: Secp256k1<SignOnly> = Secp256k1::signing_only();
+    static ref SECP256K1_VERIFY_ONLY: Secp256k1<VerifyOnly> = Secp256k1::verification_only();
+}
 
 /// Random entropy, part of extended key.
 type ChainCode = Vec<u8>;
@@ -85,8 +90,7 @@ impl ExtendedPrivKey {
     fn sign_normal_key(&self, index: u32) -> ring::hmac::Signature {
         let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
         let mut h = SigningContext::with_key(&signing_key);
-        let secp = Secp256k1::new();
-        let public_key = PublicKey::from_secret_key(&secp, &self.private_key);
+        let public_key = PublicKey::from_secret_key(&*SECP256K1_SIGN_ONLY, &self.private_key);
         h.update(&public_key.serialize());
         h.update(&index.to_be_bytes());
         h.sign()
@@ -168,9 +172,11 @@ impl ExtendedPubKey {
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         if let Ok(private_key) = SecretKey::from_slice(key) {
-            let secp = Secp256k1::new();
             let mut public_key = self.public_key;
-            if public_key.add_exp_assign(&secp, &private_key[..]).is_ok() {
+            if public_key
+                .add_exp_assign(&*SECP256K1_VERIFY_ONLY, &private_key[..])
+                .is_ok()
+            {
                 return Ok(ChildPubKey {
                     key_index: KeyIndex::Normal(index),
                     extended_key: ExtendedPubKey {
@@ -185,8 +191,8 @@ impl ExtendedPubKey {
 
     /// ExtendedPubKey from ExtendedPrivKey
     pub fn from_private_key(extended_key: &ExtendedPrivKey) -> Result<Self, Error> {
-        let secp = Secp256k1::new();
-        let public_key = PublicKey::from_secret_key(&secp, &extended_key.private_key);
+        let public_key =
+            PublicKey::from_secret_key(&*SECP256K1_SIGN_ONLY, &extended_key.private_key);
         Ok(ExtendedPubKey {
             public_key,
             chain_code: extended_key.chain_code.clone(),

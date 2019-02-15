@@ -11,6 +11,9 @@
 //! key).
 //! * [`Error`] errors.
 
+#[macro_use]
+extern crate lazy_static;
+
 mod chain_path;
 mod error;
 mod key;
