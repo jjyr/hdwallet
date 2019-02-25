@@ -37,6 +37,7 @@ pub struct ExtendedPrivKey {
 }
 
 /// Indicate size of random seed used to generate private key, 256 is recommended.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum KeySeed {
     S128 = 128,
     S256 = 256,
