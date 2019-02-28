@@ -1,5 +1,7 @@
+pub mod key_index;
+
 use crate::error::Error;
-use crate::key_index::KeyIndex;
+use key_index::KeyIndex;
 use rand::Rng;
 use ring::{
     digest,

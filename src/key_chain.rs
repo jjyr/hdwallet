@@ -1,4 +1,6 @@
-use crate::{ChainPath, ChainPathError, Error, ExtendedPrivKey, KeyIndex, SubPath};
+pub mod chain_path;
+
+use crate::{error::Error, ChainPath, ChainPathError, ExtendedPrivKey, KeyIndex, SubPath};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HDKey {
@@ -137,7 +139,7 @@ mod tests {
         }
     }
 
-    impl Serialize for BitcoinKey {
+    impl Serialize<String> for BitcoinKey {
         fn serialize(&self) -> String {
             let mut buf: Vec<u8> = Vec::with_capacity(112);
             buf.extend_from_slice(&self.version_bytes());

@@ -14,19 +14,18 @@
 #[macro_use]
 extern crate lazy_static;
 
-mod chain_path;
-mod error;
-mod key;
-mod key_chain;
-mod key_index;
-mod serialize;
+pub mod error;
+pub mod extended_key;
+pub mod key_chain;
+pub mod traits;
 
-pub use crate::chain_path::{ChainPath, Error as ChainPathError, SubPath};
-pub use crate::error::Error;
-pub use crate::key::{
-    ChildKey, ChildPrivKey, ChildPubKey, ExtendedKey, ExtendedPrivKey, ExtendedPubKey, KeySeed,
+pub use crate::extended_key::{
+    key_index::KeyIndex, ChildKey, ChildPrivKey, ChildPubKey, ExtendedKey, ExtendedPrivKey,
+    ExtendedPubKey, KeySeed,
 };
-pub use crate::key_chain::{DefaultKeyChain, HDKey, KeyChain};
-pub use crate::key_index::KeyIndex;
-pub use crate::serialize::Serialize;
+pub use crate::key_chain::{
+    chain_path::{ChainPath, Error as ChainPathError, SubPath},
+    DefaultKeyChain, HDKey, KeyChain,
+};
+pub use crate::traits::{Deserialize, Serialize};
 pub use secp256k1;
