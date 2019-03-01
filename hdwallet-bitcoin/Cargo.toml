@@ -1,0 +1,12 @@
+[package]
+name = "hdwallet-bitcoin"
+version = "0.1.0"
+authors = ["jjy <jjyruby@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+hdwallet = { path = ".." }
+hex = "0.3.2"
+base58 = "0.1.0"
+ripemd160 = "0.8.0"
+

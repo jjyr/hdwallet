@@ -9,6 +9,11 @@ keywords = [ "hdwallet", "BIP32", "wallet", "bitcoin", "crypto" ]
 readme = "README.md"
 description = "Hierarchical deterministic wallet (BIP-32)"
 
+[workspace]
+members = [
+  "hdwallet-bitcoin"
+]
+
 [dependencies]
 secp256k1 = "0.12"
 rand = "0.6.1"
