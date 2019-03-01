@@ -38,7 +38,7 @@ pub struct ExtendedPrivKey {
     pub chain_code: ChainCode,
 }
 
-/// Indicate size of random seed used to generate private key, 256 is recommended.
+/// Indicate bits of random seed used to generate private key, 256 is recommended.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum KeySeed {
     S128 = 128,
@@ -51,10 +51,10 @@ impl ExtendedPrivKey {
     pub fn random() -> Result<ExtendedPrivKey, Error> {
         ExtendedPrivKey::random_with_seed_size(KeySeed::S256)
     }
-    /// Generate an ExtendedPrivKey which use 128 or 256 or 512 size random seed.
+    /// Generate an ExtendedPrivKey which use 128 or 256 or 512 bits random seed.
     pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
         let seed = {
-            let mut seed = vec![0; seed_size as usize];
+            let mut seed = vec![0u8; seed_size as usize / 8];
             let mut rng = rand::thread_rng();
             rng.fill(seed.as_mut_slice());
             seed
