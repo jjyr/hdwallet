@@ -28,4 +28,8 @@ pub use crate::key_chain::{
     DefaultKeyChain, HDKey, KeyChain,
 };
 pub use crate::traits::{Deserialize, Serialize};
+
+// re-exports
+pub use rand;
+pub use ring;
 pub use secp256k1;
