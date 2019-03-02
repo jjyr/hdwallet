@@ -122,7 +122,7 @@ mod tests {
         fn parent_fingerprint(&self) -> Vec<u8> {
             match self.parent_key {
                 Some(ref key) => {
-                    let pubkey = ExtendedPubKey::from_private_key(key).expect("get public_key");
+                    let pubkey = ExtendedPubKey::from_private_key(key);
                     let buf = digest::digest(&digest::SHA256, &pubkey.public_key.serialize());
                     let mut hasher = Ripemd160::new();
                     hasher.input(&buf.as_ref());
@@ -135,7 +135,7 @@ mod tests {
         fn public_key(&self) -> BitcoinKey {
             match self.key {
                 ExtendedKey::PrivKey(ref key) => {
-                    let pubkey = ExtendedPubKey::from_private_key(key).expect("get public_key");
+                    let pubkey = ExtendedPubKey::from_private_key(key);
                     let mut bitcoin_key = self.clone();
                     bitcoin_key.key = ExtendedKey::PubKey(pubkey);
                     bitcoin_key

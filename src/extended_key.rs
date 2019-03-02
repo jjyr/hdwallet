@@ -133,7 +133,7 @@ impl ExtendedPrivKey {
 /// use hdwallet::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
 ///
 /// let priv_key = ExtendedPrivKey::random().unwrap();
-/// let pub_key = ExtendedPubKey::from_private_key(&priv_key).unwrap();
+/// let pub_key = ExtendedPubKey::from_private_key(&priv_key);
 ///
 /// // Public hardened child key derivation from parent public key is impossible
 /// let hardened_key_index = KeyIndex::hardened_from_normalize_index(0).unwrap();
@@ -187,13 +187,13 @@ impl ExtendedPubKey {
     }
 
     /// ExtendedPubKey from ExtendedPrivKey
-    pub fn from_private_key(extended_key: &ExtendedPrivKey) -> Result<Self, Error> {
+    pub fn from_private_key(extended_key: &ExtendedPrivKey) -> Self {
         let public_key =
             PublicKey::from_secret_key(&*SECP256K1_SIGN_ONLY, &extended_key.private_key);
-        Ok(ExtendedPubKey {
+        ExtendedPubKey {
             public_key,
             chain_code: extended_key.chain_code.clone(),
-        })
+        }
     }
 }
 
@@ -245,11 +245,10 @@ mod tests {
             let child_priv_key = parent_priv_key
                 .derive_private_key(KeyIndex::Normal(0))
                 .expect("hardended_key");
-            ExtendedPubKey::from_private_key(&child_priv_key).expect("public key")
+            ExtendedPubKey::from_private_key(&child_priv_key)
         };
         let child_pub_key_from_parent_pub_key = {
-            let parent_pub_key =
-                ExtendedPubKey::from_private_key(&parent_priv_key).expect("public key");
+            let parent_pub_key = ExtendedPubKey::from_private_key(&parent_priv_key);
             parent_pub_key
                 .derive_public_key(KeyIndex::Normal(0))
                 .expect("public key")
