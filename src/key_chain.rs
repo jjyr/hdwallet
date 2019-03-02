@@ -77,10 +77,16 @@ impl KeyChain for DefaultKeyChain {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ExtendedKey, ExtendedPubKey, Serialize};
+    use crate::{traits::Serialize, ExtendedPubKey};
     use base58::ToBase58;
     use ring::digest;
     use ripemd160::{Digest, Ripemd160};
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum ExtendedKey {
+        PrivKey(ExtendedPrivKey),
+        PubKey(ExtendedPubKey),
+    }
 
     #[allow(dead_code)]
     #[derive(Clone, Copy, Debug)]

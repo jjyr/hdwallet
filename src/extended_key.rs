@@ -203,13 +203,6 @@ impl ExtendedPubKey {
     }
 }
 
-/// ChildKey
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExtendedKey {
-    PrivKey(ExtendedPrivKey),
-    PubKey(ExtendedPubKey),
-}
-
 /// ChildPrivKey, derive from ExtendedPrivKey
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildPrivKey {
@@ -250,13 +243,6 @@ impl ChildPubKey {
             extended_key,
         })
     }
-}
-
-/// ChildKey
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ChildKey {
-    PrivKey(ChildPrivKey),
-    PubKey(ChildPubKey),
 }
 
 #[cfg(test)]

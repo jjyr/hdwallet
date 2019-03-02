@@ -20,14 +20,12 @@ pub mod key_chain;
 pub mod traits;
 
 pub use crate::extended_key::{
-    key_index::KeyIndex, ChildKey, ChildPrivKey, ChildPubKey, ExtendedKey, ExtendedPrivKey,
-    ExtendedPubKey, KeySeed,
+    key_index::KeyIndex, ChildPrivKey, ChildPubKey, ExtendedPrivKey, ExtendedPubKey, KeySeed,
 };
 pub use crate::key_chain::{
     chain_path::{ChainPath, Error as ChainPathError, SubPath},
     DefaultKeyChain, HDKey, KeyChain,
 };
-pub use crate::traits::{Deserialize, Serialize};
 
 // re-exports
 pub use rand;
