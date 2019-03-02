@@ -58,7 +58,7 @@ impl KeyChain for DefaultKeyChain {
                 SubPath::Child(child_key_index) => {
                     depth += 1;
                     key_index = Some(child_key_index);
-                    let child_key = key.derive_private_key(child_key_index)?.extended_key;
+                    let child_key = key.derive_private_key(child_key_index)?;
                     parent_key = Some(key);
                     key = child_key;
                 }

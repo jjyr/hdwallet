@@ -99,8 +99,8 @@ impl ExtendedPrivKey {
         h.sign()
     }
 
-    /// Derive a ChildPrivKey from ExtendedPrivKey.
-    pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ChildPrivKey, Error> {
+    /// Derive a child key from ExtendedPrivKey.
+    pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ExtendedPrivKey, Error> {
         if !key_index.is_valid() {
             return Err(Error::InvalidKeyIndex);
         }
@@ -114,12 +114,9 @@ impl ExtendedPrivKey {
             private_key
                 .add_assign(&self.private_key[..])
                 .expect("add point");
-            return Ok(ChildPrivKey {
-                key_index,
-                extended_key: ExtendedPrivKey {
-                    private_key,
-                    chain_code: chain_code.to_vec(),
-                },
+            return Ok(ExtendedPrivKey {
+                private_key,
+                chain_code: chain_code.to_vec(),
             });
         }
         Err(Error::InvalidResultKey)
@@ -155,7 +152,7 @@ pub struct ExtendedPubKey {
 impl ExtendedPubKey {
     /// Derive public normal child key from ExtendedPubKey,
     /// will return error if key_index is a hardened key.
-    pub fn derive_public_key(&self, key_index: KeyIndex) -> Result<ChildPubKey, Error> {
+    pub fn derive_public_key(&self, key_index: KeyIndex) -> Result<ExtendedPubKey, Error> {
         if !key_index.is_valid() {
             return Err(Error::InvalidKeyIndex);
         }
@@ -180,12 +177,9 @@ impl ExtendedPubKey {
                 .add_exp_assign(&*SECP256K1_VERIFY_ONLY, &private_key[..])
                 .is_ok()
             {
-                return Ok(ChildPubKey {
-                    key_index: KeyIndex::Normal(index),
-                    extended_key: ExtendedPubKey {
-                        public_key,
-                        chain_code: chain_code.to_vec(),
-                    },
+                return Ok(ExtendedPubKey {
+                    public_key,
+                    chain_code: chain_code.to_vec(),
                 });
             }
         }
@@ -203,51 +197,9 @@ impl ExtendedPubKey {
     }
 }
 
-/// ChildPrivKey, derive from ExtendedPrivKey
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChildPrivKey {
-    pub key_index: KeyIndex,
-    pub extended_key: ExtendedPrivKey,
-}
-
-/// ChildPubKey derive from ExtendedPubKey, or from ChildPrivKey
-///
-/// # Examples
-///
-/// ```rust
-/// # extern crate hdwallet;
-/// use hdwallet::{ExtendedPrivKey, ExtendedPubKey, ChildPubKey, KeyIndex};
-///
-/// let priv_key = ExtendedPrivKey::random().unwrap();
-/// let pub_key = ExtendedPubKey::from_private_key(&priv_key).unwrap();
-///
-/// // Derive public normal child key
-/// let normal_key_index = KeyIndex::Normal(0);
-/// let child_pub_key = pub_key.derive_public_key(normal_key_index).unwrap();
-///
-/// // Generate public child key from private child key
-/// let child_priv_key = priv_key.derive_private_key(KeyIndex::Normal(0)).unwrap();
-/// assert_eq!(child_pub_key, ChildPubKey::from_private_key(&child_priv_key).unwrap());
-/// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChildPubKey {
-    pub key_index: KeyIndex,
-    pub extended_key: ExtendedPubKey,
-}
-
-impl ChildPubKey {
-    pub fn from_private_key(child_key: &ChildPrivKey) -> Result<Self, Error> {
-        let extended_key = ExtendedPubKey::from_private_key(&child_key.extended_key)?;
-        Ok(ChildPubKey {
-            key_index: child_key.key_index,
-            extended_key,
-        })
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{ChildPubKey, ExtendedPrivKey, ExtendedPubKey, KeyIndex};
+    use super::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
 
     fn fetch_random_key() -> ExtendedPrivKey {
         loop {
@@ -293,7 +245,7 @@ mod tests {
             let child_priv_key = parent_priv_key
                 .derive_private_key(KeyIndex::Normal(0))
                 .expect("hardended_key");
-            ChildPubKey::from_private_key(&child_priv_key).expect("public key")
+            ExtendedPubKey::from_private_key(&child_priv_key).expect("public key")
         };
         let child_pub_key_from_parent_pub_key = {
             let parent_pub_key =

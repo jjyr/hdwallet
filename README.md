@@ -17,9 +17,15 @@ include a `ExtendedPrivKey` and other derivation info.
 key).
 * [`Error`] errors.
 
+`hdwallet` crate itself is a key derivation framework.
+
+Check `hdwallet-bitcoin` if you want derivation bitcoin keys, and you can find or submit other crypto
+currencies supports on [hdwallet homepage](https://github.com/jjyr/hdwallet).
+
 # Documentation
 
-[HDWallet Documentation](https://docs.rs/hdwallet)
+* [HDWallet](https://docs.rs/hdwallet)
+* [HDWallet Bitcoin](https://docs.rs/hdwallet-bitcoin)
 
 # License
 
