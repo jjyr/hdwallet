@@ -20,7 +20,7 @@
 //!     key,
 //! };
 //! let serialized_key: String = key.serialize();
-//! println!("derive m/'a/0 key: {}", serialized_key);
+//! println!("derive m/1H/0 key: {}", serialized_key);
 //! ```
 //!
 
