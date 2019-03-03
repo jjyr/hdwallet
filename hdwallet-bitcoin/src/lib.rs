@@ -1,125 +1,42 @@
-use base58::ToBase58;
-use hdwallet::ring::digest;
-use hdwallet::{ExtendedKey, ExtendedPrivKey, ExtendedPubKey, KeyIndex, Serialize};
-use ripemd160::{Digest, Ripemd160};
+mod serialize;
 
-#[derive(Clone, Copy, Debug)]
+use hdwallet::{Derivation, ExtendedPrivKey, ExtendedPubKey};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Network {
     MainNet,
     TestNet,
 }
 
 #[derive(Clone, Debug)]
-pub struct Key {
+pub struct PrivKey {
     pub network: Network,
-    pub depth: u8,
-    pub parent_key: Option<ExtendedPrivKey>,
-    pub key_index: Option<KeyIndex>,
-    pub key: ExtendedKey,
+    pub derivation: Derivation,
+    pub key: ExtendedPrivKey,
 }
 
-impl Key {
-    fn version_bytes(&self) -> Vec<u8> {
-        let hex_str = match self.network {
-            Network::MainNet => match self.key {
-                ExtendedKey::PrivKey(..) => "0488ADE4",
-                ExtendedKey::PubKey(..) => "0488B21E",
-            },
-            Network::TestNet => match self.key {
-                ExtendedKey::PrivKey(..) => "04358394",
-                ExtendedKey::PubKey(..) => "043587CF",
-            },
-        };
-        hex::decode(hex_str).expect("bitcoin network")
-    }
-
-    fn parent_fingerprint(&self) -> Vec<u8> {
-        match self.parent_key {
-            Some(ref key) => {
-                let pubkey = ExtendedPubKey::from_private_key(key).expect("get public_key");
-                let buf = digest::digest(&digest::SHA256, &pubkey.public_key.serialize());
-                let mut hasher = Ripemd160::new();
-                hasher.input(&buf.as_ref());
-                hasher.result()[0..4].to_vec()
-            }
-            None => vec![0; 4],
-        }
-    }
-
-    #[inline]
-    pub fn is_private_key(&self) -> bool {
-        self.private_key().is_some()
-    }
-    #[inline]
-    pub fn is_public_key(&self) -> bool {
-        !self.is_private_key()
-    }
-
-    pub fn private_key(&self) -> Option<&Key> {
-        match self.key {
-            ExtendedKey::PrivKey(..) => Some(&self),
-            ExtendedKey::PubKey(..) => None,
-        }
-    }
-
-    pub fn to_public_key(&self) -> Key {
-        match self.key {
-            ExtendedKey::PrivKey(ref key) => {
-                let pubkey = ExtendedPubKey::from_private_key(key).expect("get public_key");
-                let mut bitcoin_key = self.clone();
-                bitcoin_key.key = ExtendedKey::PubKey(pubkey);
-                bitcoin_key
-            }
-            ExtendedKey::PubKey(..) => self.clone(),
-        }
-    }
+#[derive(Clone, Debug)]
+pub struct PubKey {
+    pub network: Network,
+    pub derivation: Derivation,
+    pub key: ExtendedPubKey,
 }
 
-impl Serialize<Vec<u8>> for Key {
-    fn serialize(&self) -> Vec<u8> {
-        let mut buf: Vec<u8> = Vec::with_capacity(112);
-        buf.extend_from_slice(&self.version_bytes());
-        buf.extend_from_slice(&self.depth.to_be_bytes());
-        buf.extend_from_slice(&self.parent_fingerprint());
-        match self.key_index {
-            Some(key_index) => {
-                buf.extend_from_slice(&key_index.raw_index().to_be_bytes());
-            }
-            None => buf.extend_from_slice(&[0; 4]),
+impl PubKey {
+    pub fn from_private_key(priv_key: &PrivKey) -> PubKey {
+        let extended_pub_key = ExtendedPubKey::from_private_key(&priv_key.key);
+        PubKey {
+            network: priv_key.network,
+            derivation: priv_key.derivation.clone(),
+            key: extended_pub_key,
         }
-        match self.key {
-            ExtendedKey::PrivKey(ref key) => {
-                buf.extend_from_slice(&key.chain_code);
-                buf.extend_from_slice(&[0]);
-                buf.extend_from_slice(&key.private_key[..]);
-            }
-            ExtendedKey::PubKey(ref key) => {
-                buf.extend_from_slice(&key.chain_code);
-                buf.extend_from_slice(&key.public_key.serialize());
-            }
-        }
-        assert_eq!(buf.len(), 78);
-
-        let check_sum = {
-            let buf = digest::digest(&digest::SHA256, &buf);
-            digest::digest(&digest::SHA256, &buf.as_ref())
-        };
-
-        buf.extend_from_slice(&check_sum.as_ref()[0..4]);
-        buf
-    }
-}
-
-impl Serialize<String> for Key {
-    fn serialize(&self) -> String {
-        Serialize::<Vec<u8>>::serialize(self).to_base58()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hdwallet::{ChainPath, DefaultKeyChain, KeyChain};
+    use hdwallet::{traits::Serialize, ChainPath, DefaultKeyChain, KeyChain};
 
     #[test]
     fn test_bip32_vector_1() {
@@ -134,16 +51,14 @@ mod tests {
             ("m/0H/1/2H/2", "xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334", "xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV"),
             ("m/0H/1/2H/2/1000000000", "xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76", "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
-            let priv_key = Key{
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let priv_key = PrivKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                derivation,
+                key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
-            assert_eq!(&Serialize::<String>::serialize(&priv_key.to_public_key()), hex_pub_key);
+            assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
         }
     }
 
@@ -160,16 +75,14 @@ mod tests {
             ("m/0/2147483647H/1/2147483646H", "xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc", "xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL"),
             ("m/0/2147483647H/1/2147483646H/2", "xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j", "xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
-            let priv_key = Key{
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let priv_key = PrivKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                derivation,
+                key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
-            assert_eq!(&Serialize::<String>::serialize(&priv_key.to_public_key()), hex_pub_key);
+            assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
         }
     }
 
@@ -182,16 +95,14 @@ mod tests {
             ("m", "xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6", "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13"),
             ("m/0H", "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L", "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
-            let priv_key = Key{
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let priv_key = PrivKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                derivation,
+                key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
-            assert_eq!(&Serialize::<String>::serialize(&priv_key.to_public_key()), hex_pub_key);
+            assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
         }
     }
 }
