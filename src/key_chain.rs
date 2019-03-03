@@ -2,16 +2,15 @@ pub mod chain_path;
 
 use crate::{error::Error, ChainPath, ChainPathError, ExtendedPrivKey, KeyIndex, SubPath};
 
+/// KeyChain derivation info
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct HDKey {
+pub struct Derivation {
     /// depth, 0 if it is master key
     pub depth: u8,
     /// parent key
     pub parent_key: Option<ExtendedPrivKey>,
     /// key_index which used with parent key to derive this key
     pub key_index: Option<KeyIndex>,
-    /// private extended key, used for sign/verify or derivation keys
-    pub key: ExtendedPrivKey,
 }
 
 /// KeyChain is used for derivation HDKey from master_key and chain_path.
@@ -24,12 +23,15 @@ pub struct HDKey {
 ///
 /// let master_key = ExtendedPrivKey::random().unwrap();
 /// let key_chain = DefaultKeyChain::new(master_key);
-/// let child_key = key_chain.fetch_key("m/0H/1".into()).unwrap();
-/// assert_eq!(child_key, key_chain.fetch_key("m/0'/1".into()).unwrap());
+/// let child_key = key_chain.derive_private_key("m/0H/1".into()).unwrap();
+/// assert_eq!(child_key, key_chain.derive_private_key("m/0'/1".into()).unwrap());
 /// dbg!(child_key);
 /// ```
 pub trait KeyChain {
-    fn fetch_key(&self, chain_path: ChainPath) -> Result<HDKey, Error>;
+    fn derive_private_key(
+        &self,
+        chain_path: ChainPath,
+    ) -> Result<(ExtendedPrivKey, Derivation), Error>;
 }
 
 pub struct DefaultKeyChain {
@@ -43,7 +45,10 @@ impl DefaultKeyChain {
 }
 
 impl KeyChain for DefaultKeyChain {
-    fn fetch_key(&self, chain_path: ChainPath) -> Result<HDKey, Error> {
+    fn derive_private_key(
+        &self,
+        chain_path: ChainPath,
+    ) -> Result<(ExtendedPrivKey, Derivation), Error> {
         let mut iter = chain_path.iter();
         // chain_path must start with root
         if iter.next() != Some(Ok(SubPath::Root)) {
@@ -65,12 +70,14 @@ impl KeyChain for DefaultKeyChain {
                 _ => return Err(ChainPathError::Invalid.into()),
             }
         }
-        Ok(HDKey {
-            depth,
-            parent_key,
-            key_index,
+        Ok((
             key,
-        })
+            Derivation {
+                depth,
+                parent_key,
+                key_index,
+            },
+        ))
     }
 }
 
@@ -201,13 +208,13 @@ mod tests {
             ("m/0H/1/2H/2", "xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334", "xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV"),
             ("m/0H/1/2H/2/1000000000", "xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76", "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = BitcoinKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                depth: derivation.depth,
+                parent_key: derivation.parent_key,
+                key_index: derivation.key_index,
+                key: ExtendedKey::PrivKey(key),
             };
             assert_eq!(&priv_key.serialize(), hex_priv_key);
             assert_eq!(&priv_key.public_key().serialize(), hex_pub_key);
@@ -227,13 +234,13 @@ mod tests {
             ("m/0/2147483647H/1/2147483646H", "xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc", "xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL"),
             ("m/0/2147483647H/1/2147483646H/2", "xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j", "xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = BitcoinKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                depth: derivation.depth,
+                parent_key: derivation.parent_key,
+                key_index: derivation.key_index,
+                key: ExtendedKey::PrivKey(key),
             };
             assert_eq!(&priv_key.serialize(), hex_priv_key);
             assert_eq!(&priv_key.public_key().serialize(), hex_pub_key);
@@ -249,13 +256,13 @@ mod tests {
             ("m", "xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6", "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13"),
             ("m/0H", "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L", "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y")
         ] {
-            let key_info = key_chain.fetch_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = BitcoinKey{
                 network: Network::MainNet,
-                depth: key_info.depth,
-                parent_key: key_info.parent_key,
-                key_index: key_info.key_index,
-                key: ExtendedKey::PrivKey(key_info.key),
+                depth: derivation.depth,
+                parent_key: derivation.parent_key,
+                key_index: derivation.key_index,
+                key: ExtendedKey::PrivKey(key),
             };
             assert_eq!(&priv_key.serialize(), hex_priv_key);
             assert_eq!(&priv_key.public_key().serialize(), hex_pub_key);

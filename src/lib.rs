@@ -4,7 +4,7 @@
 //! see the original [secp256k1 documentation](https://docs.rs/secp256k1).
 //!
 //! * [`ChainPath`] and [`KeyChain`] used to derivation keys from string represented path.
-//! * [`HDKey`] `key_chain.fetch_key` derives `HDKey` which include `ExtendedPrivKey` and key derivation info.
+//! * [`Derivation`] `key_chain.derive_private_key` derives `ExtendedPrivKey` and `Derivation` which contains key derivation info.
 //! * [`ExtendedPrivKey`] and [`ExtendedPubKey`] as BIP-32 described it is the basic components to
 //! derive keys.
 //! * [`KeyIndex`] is a simple enum indicate the index and type of child key(Normal key or Hardened
@@ -27,7 +27,7 @@ pub mod traits;
 pub use crate::extended_key::{key_index::KeyIndex, ExtendedPrivKey, ExtendedPubKey, KeySeed};
 pub use crate::key_chain::{
     chain_path::{ChainPath, Error as ChainPathError, SubPath},
-    DefaultKeyChain, HDKey, KeyChain,
+    DefaultKeyChain, Derivation, KeyChain,
 };
 
 // re-exports
