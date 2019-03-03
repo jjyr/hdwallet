@@ -1,6 +1,35 @@
+//! HD wallet Bitcoin extention.
+//!
+//! This crate extend the `hdwallet` crate, provide Bitcoin key derivation and serialization according to BIP-32.
+//! See [hdwallet documentation](https://docs.rs/hdwallet) to learn how to derive HD keys. See [secp256k1 documentation](https://docs.rs/secp256k1) to learn how to signature.
+//!
+//! # Examples
+//!
+//! ```rust
+//! # extern crate hdwallet;
+//! # extern crate hdwallet_bitcoin;
+//! use hdwallet::{KeyChain, DefaultKeyChain, ExtendedPrivKey, traits::Serialize};
+//! use hdwallet_bitcoin::{PrivKey as BitcoinPrivKey, Network as BitcoinNetwork};
+//!
+//! let master_key = ExtendedPrivKey::random().expect("master key");
+//! let key_chain = DefaultKeyChain::new(master_key);
+//! let (key, derivation) = key_chain.derive_private_key("m/1H/0".into()).expect("derive ExtendedPrivKey");
+//! let key = BitcoinPrivKey {
+//!     network: BitcoinNetwork::MainNet,
+//!     derivation,
+//!     key,
+//! };
+//! let serialized_key: String = key.serialize();
+//! println!("derive m/'a/0 key: {}", serialized_key);
+//! ```
+//!
+
+mod error;
 mod serialize;
 
 use hdwallet::{Derivation, ExtendedPrivKey, ExtendedPubKey};
+
+pub use error::Error;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Network {
@@ -8,14 +37,14 @@ pub enum Network {
     TestNet,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrivKey {
     pub network: Network,
     pub derivation: Derivation,
     pub key: ExtendedPrivKey,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PubKey {
     pub network: Network,
     pub derivation: Derivation,

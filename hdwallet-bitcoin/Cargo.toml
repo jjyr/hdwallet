@@ -3,9 +3,13 @@ name = "hdwallet-bitcoin"
 version = "0.1.0"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/jjyr/hdwallet"
+keywords = [ "hdwallet", "BIP32", "wallet", "bitcoin", "crypto" ]
+description = "Bitcoin BIP-32 key derivation"
 
 [dependencies]
-hdwallet = { path = ".." }
+hdwallet = { path = "..", version = "0.2" }
 hex = "0.3.2"
 base58 = "0.1.0"
 ripemd160 = "0.8.0"
