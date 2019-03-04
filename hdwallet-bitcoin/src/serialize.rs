@@ -150,9 +150,9 @@ impl Serialize<Vec<u8>> for PrivKey {
             },
             &self.derivation,
         );
-        buf.extend_from_slice(&self.key.chain_code);
+        buf.extend_from_slice(&self.extended_key.chain_code);
         buf.extend_from_slice(&[0]);
-        buf.extend_from_slice(&self.key.private_key[..]);
+        buf.extend_from_slice(&self.extended_key.private_key[..]);
         assert_eq!(buf.len(), 78);
         encode_checksum(&mut buf);
         buf
@@ -176,8 +176,8 @@ impl Serialize<Vec<u8>> for PubKey {
             },
             &self.derivation,
         );
-        buf.extend_from_slice(&self.key.chain_code);
-        buf.extend_from_slice(&self.key.public_key.serialize());
+        buf.extend_from_slice(&self.extended_key.chain_code);
+        buf.extend_from_slice(&self.extended_key.public_key.serialize());
         assert_eq!(buf.len(), 78);
         encode_checksum(&mut buf);
         buf
@@ -199,7 +199,7 @@ impl Deserialize<Vec<u8>, Error> for PrivKey {
         Ok(PrivKey {
             network: version.network,
             derivation,
-            key: ExtendedPrivKey {
+            extended_key: ExtendedPrivKey {
                 chain_code,
                 private_key,
             },
@@ -223,7 +223,7 @@ impl Deserialize<Vec<u8>, Error> for PubKey {
         Ok(PubKey {
             network: version.network,
             derivation,
-            key: ExtendedPubKey {
+            extended_key: ExtendedPubKey {
                 chain_code,
                 public_key,
             },
@@ -246,11 +246,12 @@ mod tests {
     #[test]
     fn test_deserialize_priv_key() {
         let key_chain = DefaultKeyChain::new(ExtendedPrivKey::random().expect("master key"));
-        let (key, derivation) = key_chain.derive_private_key("m".into()).expect("fetch key");
+        let (extended_key, derivation) =
+            key_chain.derive_private_key("m".into()).expect("fetch key");
         let key = PrivKey {
             network: Network::MainNet,
             derivation,
-            key,
+            extended_key,
         };
         let serialized_key: String = key.serialize();
         let key2 = PrivKey::deserialize(serialized_key).expect("deserialize");
@@ -260,11 +261,12 @@ mod tests {
     #[test]
     fn test_deserialize_pub_key() {
         let key_chain = DefaultKeyChain::new(ExtendedPrivKey::random().expect("master key"));
-        let (key, derivation) = key_chain.derive_private_key("m".into()).expect("fetch key");
+        let (extended_key, derivation) =
+            key_chain.derive_private_key("m".into()).expect("fetch key");
         let key = PrivKey {
             network: Network::MainNet,
             derivation,
-            key,
+            extended_key,
         };
         let key = PubKey::from_private_key(&key);
         let serialized_key: String = key.serialize();

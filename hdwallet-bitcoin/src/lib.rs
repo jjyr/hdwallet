@@ -41,23 +41,23 @@ pub enum Network {
 pub struct PrivKey {
     pub network: Network,
     pub derivation: Derivation,
-    pub key: ExtendedPrivKey,
+    pub extended_key: ExtendedPrivKey,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PubKey {
     pub network: Network,
     pub derivation: Derivation,
-    pub key: ExtendedPubKey,
+    pub extended_key: ExtendedPubKey,
 }
 
 impl PubKey {
     pub fn from_private_key(priv_key: &PrivKey) -> PubKey {
-        let extended_pub_key = ExtendedPubKey::from_private_key(&priv_key.key);
+        let extended_pub_key = ExtendedPubKey::from_private_key(&priv_key.extended_key);
         PubKey {
             network: priv_key.network,
             derivation: priv_key.derivation.clone(),
-            key: extended_pub_key,
+            extended_key: extended_pub_key,
         }
     }
 }
@@ -80,11 +80,11 @@ mod tests {
             ("m/0H/1/2H/2", "xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334", "xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV"),
             ("m/0H/1/2H/2/1000000000", "xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76", "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy")
         ] {
-            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (extended_key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = PrivKey{
                 network: Network::MainNet,
                 derivation,
-                key
+                extended_key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
             assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
@@ -104,11 +104,11 @@ mod tests {
             ("m/0/2147483647H/1/2147483646H", "xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc", "xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL"),
             ("m/0/2147483647H/1/2147483646H/2", "xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j", "xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt")
         ] {
-            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (extended_key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = PrivKey{
                 network: Network::MainNet,
                 derivation,
-                key
+                extended_key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
             assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
@@ -124,11 +124,11 @@ mod tests {
             ("m", "xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6", "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13"),
             ("m/0H", "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L", "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y")
         ] {
-            let (key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
+            let (extended_key, derivation) = key_chain.derive_private_key(ChainPath::from(chain_path.to_string())).expect("fetch key");
             let priv_key = PrivKey{
                 network: Network::MainNet,
                 derivation,
-                key
+                extended_key
             };
             assert_eq!(&Serialize::<String>::serialize(&priv_key), hex_priv_key);
             assert_eq!(&Serialize::<String>::serialize(&PubKey::from_private_key(&priv_key)), hex_pub_key);
