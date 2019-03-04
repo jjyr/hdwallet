@@ -13,11 +13,11 @@
 //!
 //! let master_key = ExtendedPrivKey::random().expect("master key");
 //! let key_chain = DefaultKeyChain::new(master_key);
-//! let (key, derivation) = key_chain.derive_private_key("m/1H/0".into()).expect("derive ExtendedPrivKey");
+//! let (extended_key, derivation) = key_chain.derive_private_key("m/1H/0".into()).expect("derive ExtendedPrivKey");
 //! let key = BitcoinPrivKey {
 //!     network: BitcoinNetwork::MainNet,
 //!     derivation,
-//!     key,
+//!     extended_key,
 //! };
 //! let serialized_key: String = key.serialize();
 //! println!("derive m/1H/0 key: {}", serialized_key);
