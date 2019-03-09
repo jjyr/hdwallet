@@ -14,7 +14,7 @@ pub struct Derivation {
 }
 
 impl Derivation {
-    fn master() -> Self {
+    pub fn master() -> Self {
         Derivation {
             depth: 0,
             parent_key: None,
