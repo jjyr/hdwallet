@@ -1,19 +1,22 @@
-use crate::ChainPathError;
+pub use crate::ChainPathError;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Error {
-    /// Use a wrong KeyIndex
-    InvalidKeyIndex,
-    /// Index is out of range according to key index type.
-    IndexOutRange,
-    /// Key is invalid, should try next index.
-    InvalidResultKey,
+    /// Index is out of range
+    KeyIndexOutOfRange,
     /// ChainPathError
     ChainPath(ChainPathError),
+    Secp(secp256k1::Error),
 }
 
 impl From<ChainPathError> for Error {
     fn from(err: ChainPathError) -> Error {
         Error::ChainPath(err)
+    }
+}
+
+impl From<secp256k1::Error> for Error {
+    fn from(err: secp256k1::Error) -> Error {
+        Error::Secp(err)
     }
 }

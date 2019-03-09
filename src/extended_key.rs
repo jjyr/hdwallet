@@ -1,6 +1,9 @@
 pub mod key_index;
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    traits::{Deserialize, Serialize},
+};
 use key_index::KeyIndex;
 use rand::Rng;
 use ring::{
@@ -72,13 +75,11 @@ impl ExtendedPrivKey {
         };
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-        if let Ok(private_key) = SecretKey::from_slice(key) {
-            return Ok(ExtendedPrivKey {
-                private_key,
-                chain_code: chain_code.to_vec(),
-            });
-        }
-        Err(Error::InvalidResultKey)
+        let private_key = SecretKey::from_slice(key)?;
+        Ok(ExtendedPrivKey {
+            private_key,
+            chain_code: chain_code.to_vec(),
+        })
     }
 
     fn sign_hardended_key(&self, index: u32) -> ring::hmac::Signature {
@@ -102,7 +103,7 @@ impl ExtendedPrivKey {
     /// Derive a child key from ExtendedPrivKey.
     pub fn derive_private_key(&self, key_index: KeyIndex) -> Result<ExtendedPrivKey, Error> {
         if !key_index.is_valid() {
-            return Err(Error::InvalidKeyIndex);
+            return Err(Error::KeyIndexOutOfRange);
         }
         let signature = match key_index {
             KeyIndex::Hardened(index) => self.sign_hardended_key(index),
@@ -110,16 +111,12 @@ impl ExtendedPrivKey {
         };
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-        if let Ok(mut private_key) = SecretKey::from_slice(key) {
-            private_key
-                .add_assign(&self.private_key[..])
-                .expect("add point");
-            return Ok(ExtendedPrivKey {
-                private_key,
-                chain_code: chain_code.to_vec(),
-            });
-        }
-        Err(Error::InvalidResultKey)
+        let mut private_key = SecretKey::from_slice(key)?;
+        private_key.add_assign(&self.private_key[..])?;
+        Ok(ExtendedPrivKey {
+            private_key,
+            chain_code: chain_code.to_vec(),
+        })
     }
 }
 
@@ -154,12 +151,12 @@ impl ExtendedPubKey {
     /// will return error if key_index is a hardened key.
     pub fn derive_public_key(&self, key_index: KeyIndex) -> Result<ExtendedPubKey, Error> {
         if !key_index.is_valid() {
-            return Err(Error::InvalidKeyIndex);
+            return Err(Error::KeyIndexOutOfRange);
         }
 
         let index = match key_index {
             KeyIndex::Normal(i) => i,
-            KeyIndex::Hardened(_) => return Err(Error::InvalidKeyIndex),
+            KeyIndex::Hardened(_) => return Err(Error::KeyIndexOutOfRange),
         };
 
         let signature = {
@@ -171,19 +168,13 @@ impl ExtendedPubKey {
         };
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-        if let Ok(private_key) = SecretKey::from_slice(key) {
-            let mut public_key = self.public_key;
-            if public_key
-                .add_exp_assign(&*SECP256K1_VERIFY_ONLY, &private_key[..])
-                .is_ok()
-            {
-                return Ok(ExtendedPubKey {
-                    public_key,
-                    chain_code: chain_code.to_vec(),
-                });
-            }
-        }
-        Err(Error::InvalidResultKey)
+        let private_key = SecretKey::from_slice(key)?;
+        let mut public_key = self.public_key;
+        public_key.add_exp_assign(&*SECP256K1_VERIFY_ONLY, &private_key[..])?;
+        Ok(ExtendedPubKey {
+            public_key,
+            chain_code: chain_code.to_vec(),
+        })
     }
 
     /// ExtendedPubKey from ExtendedPrivKey
