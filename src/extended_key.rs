@@ -188,9 +188,46 @@ impl ExtendedPubKey {
     }
 }
 
+impl Serialize<Vec<u8>> for ExtendedPrivKey {
+    fn serialize(&self) -> Vec<u8> {
+        let mut buf = self.private_key[..].to_vec();
+        buf.extend(&self.chain_code);
+        buf
+    }
+}
+impl Deserialize<&[u8], Error> for ExtendedPrivKey {
+    fn deserialize(data: &[u8]) -> Result<Self, Error> {
+        let private_key = SecretKey::from_slice(&data[..32])?;
+        let chain_code = data[32..].to_vec();
+        Ok(ExtendedPrivKey {
+            private_key,
+            chain_code,
+        })
+    }
+}
+
+impl Serialize<Vec<u8>> for ExtendedPubKey {
+    fn serialize(&self) -> Vec<u8> {
+        let mut buf = self.public_key.serialize().to_vec();
+        buf.extend(&self.chain_code);
+        buf
+    }
+}
+impl Deserialize<&[u8], Error> for ExtendedPubKey {
+    fn deserialize(data: &[u8]) -> Result<Self, Error> {
+        let public_key = PublicKey::from_slice(&data[..33])?;
+        let chain_code = data[33..].to_vec();
+        Ok(ExtendedPubKey {
+            public_key,
+            chain_code,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
+    use crate::traits::{Deserialize, Serialize};
 
     fn fetch_random_key() -> ExtendedPrivKey {
         loop {
@@ -248,5 +285,19 @@ mod tests {
             child_pub_key_from_child_priv_key,
             child_pub_key_from_parent_pub_key
         )
+    }
+
+    #[test]
+    fn priv_key_serialize_deserialize() {
+        let key = fetch_random_key();
+        let buf = key.serialize();
+        assert_eq!(ExtendedPrivKey::deserialize(&buf).expect("de"), key);
+    }
+
+    #[test]
+    fn pub_key_serialize_deserialize() {
+        let key = ExtendedPubKey::from_private_key(&fetch_random_key());
+        let buf = key.serialize();
+        assert_eq!(ExtendedPubKey::deserialize(&buf).expect("de"), key);
     }
 }
