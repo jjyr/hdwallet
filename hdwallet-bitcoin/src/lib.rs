@@ -44,6 +44,16 @@ pub struct PrivKey {
     pub extended_key: ExtendedPrivKey,
 }
 
+impl PrivKey {
+    pub fn from_master_key(extended_key: ExtendedPrivKey, network: Network) -> Self {
+        PrivKey {
+            extended_key,
+            network,
+            derivation: Derivation::master(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PubKey {
     pub network: Network,
