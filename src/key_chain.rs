@@ -13,6 +13,22 @@ pub struct Derivation {
     pub key_index: Option<KeyIndex>,
 }
 
+impl Derivation {
+    fn master() -> Self {
+        Derivation {
+            depth: 0,
+            parent_key: None,
+            key_index: None,
+        }
+    }
+}
+
+impl Default for Derivation {
+    fn default() -> Self {
+        Derivation::master()
+    }
+}
+
 /// KeyChain is used for derivation HDKey from master_key and chain_path.
 ///
 /// # Examples
