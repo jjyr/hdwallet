@@ -8,7 +8,11 @@ use key_index::KeyIndex;
 use rand::Rng;
 use ring::{
     digest,
-    hmac::{SigningContext, SigningKey},
+    hmac::{
+        HMAC_SHA512,
+        SigningContext,
+        SigningKey,
+    },
 };
 use secp256k1::{PublicKey, Secp256k1, SecretKey, SignOnly, VerifyOnly};
 
@@ -68,7 +72,7 @@ impl ExtendedPrivKey {
     /// Generate an ExtendedPrivKey from seed
     pub fn with_seed(seed: &[u8]) -> Result<ExtendedPrivKey, Error> {
         let signature = {
-            let signing_key = SigningKey::new(&digest::SHA512, b"Bitcoin seed");
+            let signing_key = SigningKey::new(HMAC_SHA512, b"Bitcoin seed");
             let mut h = SigningContext::with_key(&signing_key);
             h.update(&seed);
             h.sign()
@@ -83,7 +87,7 @@ impl ExtendedPrivKey {
     }
 
     fn sign_hardended_key(&self, index: u32) -> ring::hmac::Signature {
-        let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+        let signing_key = SigningKey::new(HMAC_SHA512, &self.chain_code);
         let mut h = SigningContext::with_key(&signing_key);
         h.update(&[0x00]);
         h.update(&self.private_key[..]);
@@ -92,7 +96,7 @@ impl ExtendedPrivKey {
     }
 
     fn sign_normal_key(&self, index: u32) -> ring::hmac::Signature {
-        let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+        let signing_key = SigningKey::new(HMAC_SHA512, &self.chain_code);
         let mut h = SigningContext::with_key(&signing_key);
         let public_key = PublicKey::from_secret_key(&*SECP256K1_SIGN_ONLY, &self.private_key);
         h.update(&public_key.serialize());
@@ -160,7 +164,7 @@ impl ExtendedPubKey {
         };
 
         let signature = {
-            let signing_key = SigningKey::new(&digest::SHA512, &self.chain_code);
+            let signing_key = SigningKey::new(HMAC_SHA512, &self.chain_code);
             let mut h = SigningContext::with_key(&signing_key);
             h.update(&self.public_key.serialize());
             h.update(&index.to_be_bytes());
