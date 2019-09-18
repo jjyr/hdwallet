@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -17,7 +17,7 @@ members = [
 [dependencies]
 secp256k1 = "0.12"
 rand = "0.6.1"
-ring = "0.14.0"
+ring = "0.16.9"
 lazy_static = "1.2.0"
 
 [dev-dependencies]
