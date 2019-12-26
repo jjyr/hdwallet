@@ -17,7 +17,7 @@ members = [
 [dependencies]
 secp256k1 = "0.16"
 rand = "0.7"
-ring = "0.16.9"
+ring = "0.16"
 lazy_static = "1.4"
 
 [dev-dependencies]
