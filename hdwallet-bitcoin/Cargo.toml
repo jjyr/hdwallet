@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet-bitcoin"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -9,8 +9,7 @@ keywords = [ "hdwallet", "BIP32", "wallet", "bitcoin", "crypto" ]
 description = "Bitcoin BIP-32 key derivation"
 
 [dependencies]
-hdwallet = { path = "..", version = "0.2.2" }
-hex = "0.3.2"
-base58 = "0.1.0"
-ripemd160 = "0.8.0"
-
+hdwallet = { path = "..", version = "0.2.4" }
+hex = "0.4"
+base58 = "0.1"
+ripemd160 = "0.8"
