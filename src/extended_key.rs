@@ -6,13 +6,7 @@ use crate::{
 };
 use key_index::KeyIndex;
 use rand::Rng;
-use ring::{
-    hmac::{
-        HMAC_SHA512,
-        Context,
-        Key,
-    },
-};
+use ring::hmac::{Context, Key, HMAC_SHA512};
 use secp256k1::{PublicKey, Secp256k1, SecretKey, SignOnly, VerifyOnly};
 
 lazy_static! {
