@@ -15,8 +15,8 @@ members = [
 ]
 
 [dependencies]
-secp256k1 = "0.17"
-rand = "0.7"
+secp256k1 = "0.19"
+rand_core = "0.6.1"
 ring = "0.16"
 lazy_static = "1.4"
 
@@ -24,3 +24,4 @@ lazy_static = "1.4"
 hex = "0.4"
 base58 = "0.1"
 ripemd160 = "0.8"
+rand = "0.8.3"
