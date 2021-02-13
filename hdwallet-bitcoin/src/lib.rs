@@ -11,7 +11,8 @@
 //! use hdwallet::{KeyChain, DefaultKeyChain, ExtendedPrivKey, traits::Serialize};
 //! use hdwallet_bitcoin::{PrivKey as BitcoinPrivKey, Network as BitcoinNetwork};
 //!
-//! let master_key = ExtendedPrivKey::random().expect("master key");
+//! let mut rng = rand::thread_rng();
+//! let master_key = ExtendedPrivKey::random(&mut rng).expect("master key");
 //! let key_chain = DefaultKeyChain::new(master_key);
 //! let (extended_key, derivation) = key_chain.derive_private_key("m/1H/0".into()).expect("derive ExtendedPrivKey");
 //! let key = BitcoinPrivKey {

@@ -1,0 +1,15 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install Rust components
+      run: rustup component add rustfmt && rustup component add clippy
+    - name: Run CI checks
+      run: make
