@@ -14,3 +14,6 @@ hex = "0.4"
 base58 = "0.1"
 ripemd160 = "0.8"
 
+
+[dev-dependencies]
+rand = "0.8"

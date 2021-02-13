@@ -245,7 +245,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_priv_key() {
-        let key_chain = DefaultKeyChain::new(ExtendedPrivKey::random().expect("master key"));
+        let mut rng = rand::thread_rng();
+        let key_chain =
+            DefaultKeyChain::new(ExtendedPrivKey::random(&mut rng).expect("master key"));
         let (extended_key, derivation) =
             key_chain.derive_private_key("m".into()).expect("fetch key");
         let key = PrivKey {
@@ -260,7 +262,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_pub_key() {
-        let key_chain = DefaultKeyChain::new(ExtendedPrivKey::random().expect("master key"));
+        let mut rng = rand::thread_rng();
+        let key_chain =
+            DefaultKeyChain::new(ExtendedPrivKey::random(&mut rng).expect("master key"));
         let (extended_key, derivation) =
             key_chain.derive_private_key("m".into()).expect("fetch key");
         let key = PrivKey {

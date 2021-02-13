@@ -5,7 +5,7 @@ use crate::{
     traits::{Deserialize, Serialize},
 };
 use key_index::KeyIndex;
-use rand_core::{RngCore, CryptoRng};
+use rand_core::{CryptoRng, RngCore};
 use ring::hmac::{Context, Key, HMAC_SHA512};
 use secp256k1::{PublicKey, Secp256k1, SecretKey, SignOnly, VerifyOnly};
 
@@ -55,7 +55,10 @@ impl ExtendedPrivKey {
     }
 
     /// Generate an ExtendedPrivKey which use 128 or 256 or 512 bits random seed.
-    pub fn random_with_seed_size<R: RngCore + CryptoRng>(rng: &mut R, seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
+    pub fn random_with_seed_size<R: RngCore + CryptoRng>(
+        rng: &mut R,
+        seed_size: KeySeed,
+    ) -> Result<ExtendedPrivKey, Error> {
         let seed = {
             let mut seed = vec![0u8; seed_size as usize / 8];
             rng.try_fill_bytes(seed.as_mut_slice())?;
@@ -227,9 +230,9 @@ impl Deserialize<&[u8], Error> for ExtendedPubKey {
 
 #[cfg(test)]
 mod tests {
-    use rand;
     use super::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
     use crate::traits::{Deserialize, Serialize};
+    use rand;
 
     fn fetch_random_key() -> ExtendedPrivKey {
         let mut rng = rand::thread_rng();
