@@ -36,8 +36,10 @@ impl Default for Derivation {
 /// ```rust
 /// # extern crate hdwallet;
 /// use hdwallet::{KeyChain, DefaultKeyChain, ChainPath, ExtendedPrivKey};
+/// use rand;
 ///
-/// let master_key = ExtendedPrivKey::random().unwrap();
+/// let mut rng = rand::thread_rng();
+/// let master_key = ExtendedPrivKey::random(&mut rng).unwrap();
 /// let key_chain = DefaultKeyChain::new(master_key);
 /// let child_key = key_chain.derive_private_key("m/0H/1".into()).unwrap();
 /// assert_eq!(child_key, key_chain.derive_private_key("m/0'/1".into()).unwrap());

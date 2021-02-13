@@ -30,6 +30,6 @@ pub use crate::key_chain::{
 };
 
 // re-exports
-pub use rand;
+pub use rand_core;
 pub use ring;
 pub use secp256k1;

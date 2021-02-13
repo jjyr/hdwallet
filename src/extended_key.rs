@@ -5,7 +5,7 @@ use crate::{
     traits::{Deserialize, Serialize},
 };
 use key_index::KeyIndex;
-use rand::Rng;
+use rand_core::{RngCore, CryptoRng};
 use ring::hmac::{Context, Key, HMAC_SHA512};
 use secp256k1::{PublicKey, Secp256k1, SecretKey, SignOnly, VerifyOnly};
 
@@ -25,8 +25,10 @@ type ChainCode = Vec<u8>;
 /// ```rust
 /// # extern crate hdwallet;
 /// use hdwallet::{ExtendedPrivKey, KeyIndex};
+/// use rand;
 ///
-/// let master_key = ExtendedPrivKey::random().unwrap();
+/// let mut rng = rand::thread_rng();
+/// let master_key = ExtendedPrivKey::random(&mut rng).unwrap();
 /// let hardened_key_index = KeyIndex::hardened_from_normalize_index(0).unwrap();
 /// let hardended_child_priv_key = master_key.derive_private_key(hardened_key_index).unwrap();
 /// let normal_key_index = KeyIndex::Normal(0);
@@ -48,15 +50,15 @@ pub enum KeySeed {
 
 impl ExtendedPrivKey {
     /// Generate an ExtendedPrivKey, use 256 size random seed.
-    pub fn random() -> Result<ExtendedPrivKey, Error> {
-        ExtendedPrivKey::random_with_seed_size(KeySeed::S256)
+    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<ExtendedPrivKey, Error> {
+        ExtendedPrivKey::random_with_seed_size(rng, KeySeed::S256)
     }
+
     /// Generate an ExtendedPrivKey which use 128 or 256 or 512 bits random seed.
-    pub fn random_with_seed_size(seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
+    pub fn random_with_seed_size<R: RngCore + CryptoRng>(rng: &mut R, seed_size: KeySeed) -> Result<ExtendedPrivKey, Error> {
         let seed = {
             let mut seed = vec![0u8; seed_size as usize / 8];
-            let mut rng = rand::thread_rng();
-            rng.fill(seed.as_mut_slice());
+            rng.try_fill_bytes(seed.as_mut_slice())?;
             seed
         };
         Self::with_seed(&seed)
@@ -125,8 +127,10 @@ impl ExtendedPrivKey {
 /// ```rust
 /// # extern crate hdwallet;
 /// use hdwallet::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
+/// use rand;
 ///
-/// let priv_key = ExtendedPrivKey::random().unwrap();
+/// let mut rng = rand::thread_rng();
+/// let priv_key = ExtendedPrivKey::random(&mut rng).unwrap();
 /// let pub_key = ExtendedPubKey::from_private_key(&priv_key);
 ///
 /// // Public hardened child key derivation from parent public key is impossible
@@ -223,12 +227,14 @@ impl Deserialize<&[u8], Error> for ExtendedPubKey {
 
 #[cfg(test)]
 mod tests {
+    use rand;
     use super::{ExtendedPrivKey, ExtendedPubKey, KeyIndex};
     use crate::traits::{Deserialize, Serialize};
 
     fn fetch_random_key() -> ExtendedPrivKey {
+        let mut rng = rand::thread_rng();
         loop {
-            if let Ok(key) = ExtendedPrivKey::random() {
+            if let Ok(key) = ExtendedPrivKey::random(&mut rng) {
                 return key;
             }
         }
@@ -236,8 +242,9 @@ mod tests {
 
     #[test]
     fn random_extended_priv_key() {
+        let mut rng = rand::thread_rng();
         for _ in 0..10 {
-            if ExtendedPrivKey::random().is_ok() {
+            if ExtendedPrivKey::random(&mut rng).is_ok() {
                 return;
             }
         }
