@@ -1,5 +1,6 @@
 use crate::KeyIndex;
 use std::fmt;
+use std::borrow::Cow;
 
 const MASTER_SYMBOL: &str = "m";
 const HARDENED_SYMBOLS: [&str; 2] = ["H", "'"];
@@ -31,21 +32,27 @@ pub enum Error {
 /// ]);
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct ChainPath(String);
+pub struct ChainPath<'a> {
+    path: Cow<'a, str>
+}
 
-impl ChainPath {
+impl<'a> ChainPath<'a> {
+    pub fn new<S>(path: S) -> Self where S: Into<Cow<'a, str>> {
+        Self { path: path.into() }
+    }
+
     /// An SubPath iterator over the ChainPath from Root to child keys.
     pub fn iter(&self) -> impl Iterator<Item = Result<SubPath, Error>> + '_ {
-        Iter(self.0.split_terminator(SEPARATOR))
+        Iter(self.path.split_terminator(SEPARATOR))
     }
 
     pub fn into_string(self) -> String {
-        self.0
+        self.path.into()
     }
 
     /// Convert ChainPath to &str represent format
     fn to_string(&self) -> &str {
-        &self.0
+        &self.path
     }
 }
 
@@ -94,19 +101,19 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for Iter<'a, I> {
     }
 }
 
-impl From<String> for ChainPath {
+impl<'a> From<String> for ChainPath<'a> {
     fn from(path: String) -> Self {
-        ChainPath(path)
+        ChainPath::new(path)
     }
 }
 
-impl From<&str> for ChainPath {
-    fn from(path: &str) -> Self {
-        ChainPath(path.to_string())
+impl<'a> From<&'a str> for ChainPath<'a> {
+    fn from(path: &'a str) -> Self {
+        ChainPath::new(path)
     }
 }
 
-impl fmt::Display for ChainPath {
+impl fmt::Display for ChainPath<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.to_string())
     }
@@ -119,21 +126,21 @@ mod tests {
     #[test]
     fn test_chain_path() {
         assert_eq!(
-            ChainPath::from("m".to_string())
+            ChainPath::from("m")
                 .iter()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
             vec![SubPath::Root]
         );
         assert_eq!(
-            ChainPath::from("m/1".to_string())
+            ChainPath::from("m/1")
                 .iter()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
             vec![SubPath::Root, SubPath::Child(KeyIndex::Normal(1))],
         );
         assert_eq!(
-            ChainPath::from("m/2147483649H/1".to_string())
+            ChainPath::from("m/2147483649H/1")
                 .iter()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
@@ -145,7 +152,7 @@ mod tests {
         );
         // alternative hardened key represent
         assert_eq!(
-            ChainPath::from("m/2147483649'/1".to_string())
+            ChainPath::from("m/2147483649'/1")
                 .iter()
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap(),
@@ -156,17 +163,25 @@ mod tests {
             ],
         );
         // from invalid string
-        assert!(ChainPath::from("m/2147483649h/1".to_string())
+        assert!(ChainPath::from("m/2147483649h/1")
             .iter()
             .collect::<Result<Vec<_>, _>>()
             .is_err());
-        assert!(ChainPath::from("/2147483649H/1".to_string())
+        assert!(ChainPath::from("/2147483649H/1")
             .iter()
             .collect::<Result<Vec<_>, _>>()
             .is_err());
-        assert!(ChainPath::from("a".to_string())
+        assert!(ChainPath::from("a")
             .iter()
             .collect::<Result<Vec<_>, _>>()
             .is_err());
+    }
+
+    #[test]
+    fn test_chain_path_new() {
+        // new from string slice
+        assert_eq!("m/1", ChainPath::new("m/1").to_string());
+        // new from a runtime String
+        assert_eq!("m/1", ChainPath::new(String::from("m/1")).to_string());
     }
 }
