@@ -197,7 +197,7 @@ mod tests {
 
             let check_sum = {
                 let buf = digest::digest(&digest::SHA256, &buf);
-                digest::digest(&digest::SHA256, &buf.as_ref())
+                digest::digest(&digest::SHA256, buf.as_ref())
             };
 
             buf.extend_from_slice(&check_sum.as_ref()[0..4]);
@@ -206,8 +206,8 @@ mod tests {
     }
 
     fn from_hex(hex_string: &str) -> Vec<u8> {
-        if hex_string.starts_with("0x") {
-            hex::decode(&hex_string[2..]).expect("decode")
+        if let Some(hex_string) = hex_string.strip_prefix("0x") {
+            hex::decode(hex_string).expect("decode")
         } else {
             hex::decode(hex_string).expect("decode")
         }

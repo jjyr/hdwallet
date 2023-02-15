@@ -72,7 +72,7 @@ impl ExtendedPrivKey {
         let signature = {
             let signing_key = Key::new(HMAC_SHA512, b"Bitcoin seed");
             let mut h = Context::with_key(&signing_key);
-            h.update(&seed);
+            h.update(seed);
             h.sign()
         };
         let sig_bytes = signature.as_ref();
@@ -113,8 +113,8 @@ impl ExtendedPrivKey {
         };
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
-        let mut private_key = SecretKey::from_slice(key)?;
-        private_key.add_assign(&self.private_key[..])?;
+        let private_key = SecretKey::from_slice(key)?;
+        let private_key = private_key.add_tweak(&self.private_key.into())?;
         Ok(ExtendedPrivKey {
             private_key,
             chain_code: chain_code.to_vec(),
@@ -173,8 +173,8 @@ impl ExtendedPubKey {
         let sig_bytes = signature.as_ref();
         let (key, chain_code) = sig_bytes.split_at(sig_bytes.len() / 2);
         let private_key = SecretKey::from_slice(key)?;
-        let mut public_key = self.public_key;
-        public_key.add_exp_assign(&*SECP256K1_VERIFY_ONLY, &private_key[..])?;
+        let public_key = self.public_key;
+        let public_key = public_key.add_exp_tweak(&*SECP256K1_VERIFY_ONLY, &private_key.into())?;
         Ok(ExtendedPubKey {
             public_key,
             chain_code: chain_code.to_vec(),

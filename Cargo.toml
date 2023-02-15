@@ -1,8 +1,8 @@
 [package]
 name = "hdwallet"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["jjy <jjyruby@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 repository = "https://github.com/jjyr/hdwallet"
 keywords = [ "hdwallet", "BIP32", "wallet", "bitcoin", "crypto" ]
@@ -15,8 +15,8 @@ members = [
 ]
 
 [dependencies]
-secp256k1 = "0.21"
-rand_core = "0.6.1"
+secp256k1 = "0.26"
+rand_core = "0.6.4"
 ring = "0.16"
 lazy_static = "1.4"
 
