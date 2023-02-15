@@ -6,7 +6,7 @@ use hdwallet::{
     traits::{Deserialize, Serialize},
     Derivation, ExtendedPrivKey, ExtendedPubKey, KeyIndex,
 };
-use ripemd160::{Digest, Ripemd160};
+use ripemd::{Digest, Ripemd160};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum KeyType {
@@ -73,8 +73,8 @@ impl DerivationExt for Derivation {
                 let pubkey = ExtendedPubKey::from_private_key(key);
                 let buf = digest::digest(&digest::SHA256, &pubkey.public_key.serialize());
                 let mut hasher = Ripemd160::new();
-                hasher.input(&buf.as_ref());
-                hasher.result()[0..4].to_vec()
+                hasher.update(&buf.as_ref());
+                hasher.finalize()[0..4].to_vec()
             }
             None => vec![0; 4],
         }
@@ -120,8 +120,8 @@ fn decode_derivation(buf: &[u8]) -> Result<(Version, Derivation), Error> {
 
 fn encode_checksum(buf: &mut Vec<u8>) {
     let check_sum = {
-        let buf = digest::digest(&digest::SHA256, &buf);
-        digest::digest(&digest::SHA256, &buf.as_ref())
+        let buf = digest::digest(&digest::SHA256, buf);
+        digest::digest(&digest::SHA256, buf.as_ref())
     };
 
     buf.extend_from_slice(&check_sum.as_ref()[0..4]);
@@ -130,7 +130,7 @@ fn encode_checksum(buf: &mut Vec<u8>) {
 fn verify_checksum(buf: &[u8]) -> Result<(), Error> {
     let check_sum = {
         let buf = digest::digest(&digest::SHA256, &buf[0..78]);
-        digest::digest(&digest::SHA256, &buf.as_ref())
+        digest::digest(&digest::SHA256, buf.as_ref())
     };
     if check_sum.as_ref()[0..4] == buf[78..82] {
         Ok(())
