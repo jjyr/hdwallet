@@ -1,3 +1,5 @@
+use thiserror::Error;
+
 use crate::KeyIndex;
 use std::borrow::Cow;
 use std::fmt;
@@ -6,10 +8,13 @@ const MASTER_SYMBOL: &str = "m";
 const HARDENED_SYMBOLS: [&str; 2] = ["H", "'"];
 const SEPARATOR: char = '/';
 
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[derive(Error, Clone, Debug, Copy, PartialEq, Eq)]
 pub enum Error {
+    #[error("Invalid key path")]
     Invalid,
+    #[error("blank")]
     Blank,
+    #[error("Key index is out of range")]
     KeyIndexOutOfRange,
 }
 

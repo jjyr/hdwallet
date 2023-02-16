@@ -1,14 +1,17 @@
 pub use crate::ChainPathError;
 
 use rand_core;
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    /// Index is out of range
+    #[error("Key index out of range")]
     KeyIndexOutOfRange,
-    /// ChainPathError
+    #[error("Chain path {0}")]
     ChainPath(ChainPathError),
+    #[error("Secp256k1 error {0}")]
     Secp(secp256k1::Error),
+    #[error("rand error {0}")]
     Rng(rand_core::Error),
 }
 

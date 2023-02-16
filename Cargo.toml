@@ -19,6 +19,7 @@ secp256k1 = "0.26"
 rand_core = "0.6.4"
 ring = "0.16"
 lazy_static = "1.4"
+thiserror = "1.0.38"
 
 [dev-dependencies]
 hex = "0.4"
