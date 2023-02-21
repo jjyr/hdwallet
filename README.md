@@ -2,7 +2,6 @@
 
 [![Crates.io](https://img.shields.io/crates/v/hdwallet.svg)](https://crates.io/crates/hdwallet)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Build Status](https://travis-ci.org/jjyr/hdwallet.svg?branch=master)](https://travis-ci.org/jjyr/hdwallet)
 [Docs](https://docs.rs/hdwallet)
 
 HD wallet([BIP-32]) key derivation utilities.
