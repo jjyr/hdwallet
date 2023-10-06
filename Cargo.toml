@@ -1,6 +1,6 @@
 [package]
 name = "hdwallet"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["jjy <jjyruby@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -15,14 +15,14 @@ members = [
 ]
 
 [dependencies]
-secp256k1 = "0.26"
+secp256k1 = "0.28.0"
 rand_core = "0.6.4"
-ring = "0.16"
+ring = "0.17.5"
 lazy_static = "1.4"
-thiserror = "1.0.38"
+thiserror = "1.0.50"
 
 [dev-dependencies]
-hex = "0.4"
-base58 = "0.1"
-ripemd160 = "0.8"
-rand = "0.8.3"
+hex = "0.4.3"
+base58 = "0.2.0"
+ripemd160 = "0.10.0"
+rand = "0.8.5"
